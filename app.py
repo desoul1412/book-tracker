@@ -52,8 +52,7 @@ st.markdown("""
         text-transform: uppercase;
     }
 
-    /* 4. SIDEBAR CONNECT BUTTON */
-    /* Make the primary button pop! */
+    /* 4. SIDEBAR STYLING */
     button[kind="primary"] {
         background-color: #5b8aed !important;
         border: none !important;
@@ -65,7 +64,7 @@ st.markdown("""
         background-color: #4a7ac9 !important;
         box-shadow: 0 4px 8px rgba(0,0,0,0.2);
     }
-
+    
     /* 5. CLEANUP */
     .css-15zrgzn {display: none}
     div[data-testid="stFeedback"] { justify-content: center; }
@@ -113,17 +112,14 @@ st.sidebar.title("📚 Library")
 if 'sheet_conn' not in st.session_state:
     st.sidebar.markdown("### 🔌 Connect")
     
-    # STEP 1: BLUE BOX
     st.sidebar.info("**Step 1:** Share your Google Sheet with this email:")
     st.sidebar.code(bot_email, language="text")
     
-    # STEP 2: BLUE BOX (Visual Match)
     st.sidebar.info("**Step 2:** Paste your Google Sheet Link below:")
     sheet_url = st.sidebar.text_input("Sheet URL", placeholder="https://docs.google.com/...", label_visibility="collapsed")
     
     st.sidebar.markdown("---")
     
-    # BUTTON: STANDOUT (Primary)
     if st.sidebar.button("🔌 Connect Library", type="primary"):
         if sheet_url:
             sheet, error = connect_to_sheet(sheet_url)
@@ -194,9 +190,13 @@ if 'sheet_conn' in st.session_state:
             "Timestamp": get_col_name(df, ["Timestamp", "Date Added", "Time"])
         }
 
+        # Validate Title Column
         if col_map["Title"]:
             df = df[df[col_map["Title"]].astype(str).str.strip() != '']
             df['real_row_index'] = range(2, len(df) + 2)
+        else:
+            st.error("Error: Could not find a 'Title' column in your sheet.")
+            st.stop()
 
         st.title(f"📖 {sheet.title}")
 
@@ -227,7 +227,10 @@ if 'sheet_conn' in st.session_state:
                 return selected_tags, actual_col
             return [], None
 
-        # 1. APPLY FILTERS
+        # 1. SIDEBAR FILTERS
+        sel_auth, col_auth = add_simple_filter("Author", "Author")
+        if sel_auth: filtered_df = filtered_df[filtered_df[col_auth].isin(sel_auth)]
+
         sel_stat, col_stat = add_simple_filter("Reading Status", "Status")
         if sel_stat: filtered_df = filtered_df[filtered_df[col_stat].isin(sel_stat)]
 
@@ -252,15 +255,16 @@ if 'sheet_conn' in st.session_state:
             pattern = '|'.join(sel_tropes)
             filtered_df = filtered_df[filtered_df[col_tropes].astype(str).str.contains(pattern, case=False, na=False)]
         
-        # --- SEARCH ---
-        search_query = st.text_input("🔎 Search Title or Author", "")
-        if search_query:
-            c_title = col_map["Title"]
-            c_author = col_map["Author"]
-            filtered_df = filtered_df[
-                filtered_df[c_title].astype(str).str.contains(search_query, case=False, na=False) |
-                filtered_df[c_author].astype(str).str.contains(search_query, case=False, na=False)
-            ]
+        # --- SEARCH WITH SUGGESTIONS (Selectbox) ---
+        # We use selectbox to provide the dropdown/autocomplete behavior
+        c_title = col_map["Title"]
+        all_titles = sorted(df[c_title].astype(str).unique().tolist())
+        
+        # Search Widget
+        search_choice = st.selectbox("🔎 Search Book (Type to suggest):", [""] + all_titles, index=0)
+        
+        if search_choice:
+            filtered_df = filtered_df[filtered_df[c_title] == search_choice]
 
         # --- SORTING ---
         sort_option = st.selectbox("Sort By:", [
@@ -319,6 +323,7 @@ if 'sheet_conn' in st.session_state:
                 else:
                     curr_stars = int(raw_rating) if raw_rating else 0
                 
+                default_idx = curr_stars - 1 if curr_stars > 0 else None
                 new_star_idx = st.feedback("stars", key="modal_stars")
                 final_stars = new_star_idx + 1 if new_star_idx is not None else curr_stars
 
@@ -352,6 +357,7 @@ if 'sheet_conn' in st.session_state:
                     
                     rating_str = "★" * final_stars if final_stars > 0 else ""
                     
+                    # Updates
                     if col_map['Series']: ws.update_cell(r, get_idx(col_map['Series']), s_name)
                     if col_map['SeriesNum']: ws.update_cell(r, get_idx(col_map['SeriesNum']), s_num)
                     if col_map['Date']: ws.update_cell(r, get_idx(col_map['Date']), new_date)
@@ -388,6 +394,7 @@ if 'sheet_conn' in st.session_state:
                 c_title = col_map["Title"]
                 title_txt = str(row[c_title]) if c_title else "Untitled"
                 
+                # Modal Trigger
                 if st.button(title_txt, key=f"btn_{index}"):
                     show_book_modal(row)
 
