@@ -3,7 +3,7 @@ import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 import pandas as pd
 from datetime import datetime
-import time # Added for delays if needed
+import time
 
 # --- CONFIG ---
 st.set_page_config(page_title="My Book Shelf", layout="wide", page_icon="📚")
@@ -139,23 +139,19 @@ else:
         st.cache_data.clear()
         st.rerun()
     
-    # --- ADD BOOK (UPDATED WITH AUTO-CLEAR) ---
+    # --- ADD BOOK ---
     with st.sidebar.expander("➕ Add Book", expanded=False):
-        # NOTE: clear_on_submit=True is the magic command here
         with st.form("add_book_form", clear_on_submit=True):
             new_title = st.text_input("Title *")
             new_author = st.text_input("Author *")
             new_cover = st.text_input("Cover URL")
             new_status = st.selectbox("Status", ["To Read", "Reading", "Read", "DNF"])
             
-            # Form Submit Button
             submitted = st.form_submit_button("Add")
             
             if submitted:
                 try:
                     sheet = st.session_state['sheet_conn']
-                    
-                    # 1. Target correct sheet
                     target_ws = None
                     for ws in sheet.worksheets():
                         if "form responses" in ws.title.lower():
@@ -163,7 +159,6 @@ else:
                             break
                     if not target_ws: target_ws = sheet.get_worksheet(0)
 
-                    # 2. Get Headers
                     headers = target_ws.row_values(1)
                     new_row = [""] * len(headers) 
 
@@ -173,7 +168,6 @@ else:
                                 return i
                         return -1
 
-                    # 3. Map Data
                     idx_time = get_idx("Timestamp")
                     if idx_time >= 0: new_row[idx_time] = str(datetime.now())
 
@@ -190,14 +184,10 @@ else:
                     if idx_cover == -1: idx_cover = get_idx("URL #1")
                     if idx_cover >= 0: new_row[idx_cover] = new_cover
 
-                    # 4. Append
                     target_ws.append_row(new_row)
-                    
-                    # 5. Success Message & Reset
                     st.toast(f"✅ Book added successfully!", icon="🎉")
                     st.cache_data.clear()
                     st.rerun()
-                    
                 except Exception as e:
                     st.error(f"Error adding book: {e}")
 
@@ -214,34 +204,51 @@ if 'sheet_conn' in st.session_state:
                 break
         if not target_ws: target_ws = sheet.get_worksheet(0)
         
-        data = target_ws.get_all_records()
-        df = pd.DataFrame(data)
+        # --- ROBUST DATA FETCHING (Fixes "Duplicate Header" Error) ---
+        # Instead of get_all_records(), we get raw values and build DF manually
+        all_values = target_ws.get_all_values()
+        
+        if len(all_values) > 1:
+            headers = all_values[0]
+            data_rows = all_values[1:]
+            
+            # Create DataFrame manually
+            df = pd.DataFrame(data_rows, columns=headers)
+        else:
+            df = pd.DataFrame() # Empty sheet handling
 
         # MAPPING
+        def get_col_name(df_columns, possible_names):
+            for col in df_columns:
+                if col.strip().lower() in [p.lower() for p in possible_names]:
+                    return col
+            return None
+
         col_map = {
-            "Title": "Title",
-            "Author": "Author",
-            "Status": "Reading Status",
-            "Cover": "Cover URL",
-            "Cover_Alt": "URL #1",
-            "Rating": "Rating",
-            "Source": "Source",
-            "Primary": "Primary Genre",
-            "Secondary": "Secondary Genre(s)",
-            "Tropes": "Tropes",
-            "Owned": "Owned?",
-            "Review": "Reviews",
-            "Format": "Format",
-            "Date": "Date Finished",
-            "Series": "Series Name",
-            "SeriesNum": "Number in Series",
-            "Timestamp": "Timestamp"
+            "Title": get_col_name(df.columns, ["Title", "Book Title"]),
+            "Author": get_col_name(df.columns, ["Author", "Author Name"]),
+            "Status": get_col_name(df.columns, ["Reading Status", "Status"]),
+            "Cover": get_col_name(df.columns, ["Cover URL", "Cover", "Image"]),
+            "Cover_Alt": get_col_name(df.columns, ["URL #1", "URL"]),
+            "Rating": get_col_name(df.columns, ["Rating", "My Rating", "Stars"]),
+            "Source": get_col_name(df.columns, ["Source", "Bought From"]),
+            "Primary": get_col_name(df.columns, ["Primary Genre", "Genre 1"]),
+            "Secondary": get_col_name(df.columns, ["Secondary Genre(s)", "Secondary Genre"]),
+            "Tropes": get_col_name(df.columns, ["Tropes", "Tags"]),
+            "Owned": get_col_name(df.columns, ["Owned?", "Owned"]),
+            "Review": get_col_name(df.columns, ["Reviews", "Review", "My Review"]),
+            "Format": get_col_name(df.columns, ["Format"]),
+            "Date": get_col_name(df.columns, ["Date Finished", "Date Read"]),
+            "Series": get_col_name(df.columns, ["Series Name", "Series"]),
+            "SeriesNum": get_col_name(df.columns, ["Number in Series", "Series #"]),
+            "Timestamp": get_col_name(df.columns, ["Timestamp", "Date Added"])
         }
 
-        if col_map["Title"] not in df.columns:
-            st.error(f"Error: Column '{col_map['Title']}' not found in sheet.")
+        if not col_map["Title"]:
+            st.error(f"Error: Could not find 'Title' column in sheet '{target_ws.title}'.")
             st.stop()
             
+        # Clean Data
         df = df[df[col_map["Title"]].astype(str).str.strip() != '']
         df['real_row_index'] = df.index + 2 
 
@@ -256,11 +263,11 @@ if 'sheet_conn' in st.session_state:
         def get_unique_items(df, col_name):
             if col_name not in df.columns: return []
             items = df[col_name].astype(str).str.split(',').explode().str.strip()
-            return sorted([x for x in items.unique() if x and x.lower() != 'nan'])
+            return sorted([x for x in items.unique() if x and x.lower() != 'nan' and x != ''])
 
         def add_filter(label, col_key, split=False):
             actual_col = col_map.get(col_key)
-            if col_key == "Cover" and actual_col not in df.columns:
+            if col_key == "Cover" and not actual_col:
                 actual_col = col_map.get("Cover_Alt")
             
             if actual_col and actual_col in df.columns:
@@ -268,7 +275,8 @@ if 'sheet_conn' in st.session_state:
                     opts = get_unique_items(df, actual_col)
                     sel = st.sidebar.multiselect(label, opts)
                     if sel:
-                        pat = '|'.join(sel)
+                        pat = '|'.join([x.strip() for x in sel])
+                        # Escape special regex chars if needed, but usually fine for simple text
                         return sel, actual_col, pat
                 else:
                     opts = sorted([str(x) for x in df[actual_col].unique() if str(x).strip() != ""])
@@ -413,6 +421,7 @@ if 'sheet_conn' in st.session_state:
                     
                     rating_str = "★" * final_stars if final_stars > 0 else ""
                     
+                    # Exact Updates
                     if col_map['Series'] in df.columns: target_ws.update_cell(r, get_idx(col_map['Series']), s_name)
                     if col_map['SeriesNum'] in df.columns: target_ws.update_cell(r, get_idx(col_map['SeriesNum']), s_num)
                     if col_map['Date'] in df.columns: target_ws.update_cell(r, get_idx(col_map['Date']), new_date)
