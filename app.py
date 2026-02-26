@@ -134,6 +134,7 @@ else:
         st.cache_data.clear()
         st.rerun()
     
+    # --- SMART ADD BOOK FUNCTION ---
     with st.sidebar.expander("➕ Add Book", expanded=False):
         with st.form("add_book_form"):
             new_title = st.text_input("Title *")
@@ -144,19 +145,46 @@ else:
             if st.form_submit_button("Add"):
                 try:
                     sheet = st.session_state['sheet_conn']
-                    ws = sheet.worksheet("Form Responses")
-                    new_row = [""] * 21
-                    new_row[0] = str(datetime.now())
-                    new_row[1] = new_author
-                    new_row[2] = new_title
-                    new_row[9] = new_status
-                    new_row[15] = new_cover
+                    # Try to get 'Form Responses', fallback to first sheet if renamed
+                    try:
+                        ws = sheet.worksheet("Form Responses")
+                    except:
+                        ws = sheet.get_worksheet(0)
+
+                    # 1. READ HEADERS TO FIND CORRECT COLUMNS
+                    headers = ws.row_values(1) # Get first row
+                    new_row = [""] * len(headers) # Create empty row
+
+                    # Helper to find index of a column name
+                    def get_idx(possible_names):
+                        for i, h in enumerate(headers):
+                            if h.strip().lower() in [p.lower() for p in possible_names]:
+                                return i
+                        return -1
+
+                    # 2. MAP DATA TO CORRECT INDEX
+                    idx_time = get_idx(["Timestamp", "Date Added", "Time"])
+                    if idx_time >= 0: new_row[idx_time] = str(datetime.now())
+
+                    idx_title = get_idx(["Title", "Book Title"])
+                    if idx_title >= 0: new_row[idx_title] = new_title
+
+                    idx_auth = get_idx(["Author", "Author Name"])
+                    if idx_auth >= 0: new_row[idx_auth] = new_author
+
+                    idx_stat = get_idx(["Status", "Reading Status", "State"])
+                    if idx_stat >= 0: new_row[idx_stat] = new_status
+
+                    idx_cover = get_idx(["Cover", "Cover URL", "Image"])
+                    if idx_cover >= 0: new_row[idx_cover] = new_cover
+
+                    # 3. APPEND
                     ws.append_row(new_row)
-                    st.success("Added!")
+                    st.success("Book Added to Sheet!")
                     st.cache_data.clear()
                     st.rerun()
                 except Exception as e:
-                    st.error(f"Error: {e}")
+                    st.error(f"Error adding book: {e}")
 
 # --- MAIN APP ---
 if 'sheet_conn' in st.session_state:
