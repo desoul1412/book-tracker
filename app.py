@@ -26,26 +26,19 @@ st.markdown("""
         font-size: 15px !important;
         text-align: center !important;
     }
+    div[data-testid="stButton"] button:hover { color: #5b8aed !important; }
     .book-header {
-        background-color: #5b8aed;
-        color: white;
-        padding: 15px;
-        text-align: center;
-        font-weight: bold;
-        font-size: 24px;
-        border-radius: 8px 8px 0 0;
-        text-transform: uppercase;
+        background-color: #5b8aed; color: white; padding: 15px; text-align: center;
+        font-weight: bold; font-size: 24px; border-radius: 8px 8px 0 0; text-transform: uppercase;
     }
-    button[kind="primary"] {
-        background-color: #5b8aed !important;
-        color: white !important;
-    }
+    button[kind="primary"] { background-color: #5b8aed !important; color: white !important; }
+    button[kind="secondary"] { border-color: #fc8181 !important; color: #c53030 !important; }
     .css-15zrgzn {display: none}
     div[data-testid="stFeedback"] { justify-content: center; }
 </style>
 """, unsafe_allow_html=True)
 
-# --- AUTH SETUP ---
+# --- AUTH & CONNECTION ---
 creds_dict = st.secrets["gcp_service_account"] if "gcp_service_account" in st.secrets else None
 bot_email = creds_dict["client_email"] if creds_dict else "Unavailable"
 
@@ -80,30 +73,18 @@ else:
             new_author = st.text_input("Author *")
             new_cover = st.text_input("Cover URL")
             new_status = st.selectbox("Status", ["To Read", "Reading", "Read", "DNF"])
-            
             if st.form_submit_button("Add", type="primary"):
                 try:
                     ws = st.session_state['sheet_conn'].worksheet("Form Responses")
                     headers = ws.row_values(1)
                     new_row = [""] * len(headers)
-                    
-                    mapping = {
-                        "Timestamp": str(datetime.now()),
-                        "Author": new_author,
-                        "Title": new_title,
-                        "Reading Status": new_status,
-                        "Cover URL": new_cover
-                    }
-                    
+                    mapping = {"Timestamp": str(datetime.now()), "Author": new_author, "Title": new_title, "Reading Status": new_status, "Cover URL": new_cover}
                     for i, h in enumerate(headers):
-                        if h in mapping:
-                            new_row[i] = mapping[h]
-                    
+                        if h in mapping: new_row[i] = mapping[h]
                     ws.append_row(new_row)
                     st.toast("✅ Book Added!")
                     st.rerun()
-                except Exception as e:
-                    st.error(f"Error: {e}")
+                except Exception as e: st.error(f"Error: {e}")
 
 # --- MAIN APP ---
 if 'sheet_conn' in st.session_state:
@@ -117,25 +98,55 @@ if 'sheet_conn' in st.session_state:
             "Cover": "Cover URL", "Rating": "Rating", "Source": "Source",
             "Primary": "Primary Genre", "Secondary": "Secondary Genre(s)",
             "Tropes": "Tropes", "Owned": "Owned?", "Review": "Reviews",
-            "Series": "Series Name", "SeriesNum": "Number in Series",
-            "Timestamp": "Timestamp"
+            "Series": "Series Name", "SeriesNum": "Number in Series", "Timestamp": "Timestamp"
         }
 
         df = df[df[col_map["Title"]].astype(str).str.strip() != ""]
         df['real_row_index'] = df.index + 2
 
-        # --- FILTERS & SORTING ---
+        # --- FILTERS (RESTORED) ---
         st.sidebar.markdown("---")
+        st.sidebar.subheader("🔍 Filters")
         filtered_df = df.copy()
-        
-        search = st.text_input("🔍 Search Title or Author")
-        if search:
-            filtered_df = filtered_df[
-                filtered_df[col_map["Title"]].str.contains(search, case=False) |
-                filtered_df[col_map["Author"]].str.contains(search, case=False)
-            ]
 
-        # --- MODAL DIALOG ---
+        def add_split_filter(label, col_name):
+            if col_name in df.columns:
+                # Splits comma-separated values into unique single tags
+                items = df[col_name].astype(str).str.split(',').explode().str.strip()
+                unique_items = sorted([x for x in items.unique() if x and x.lower() != 'nan'])
+                return st.sidebar.multiselect(label, unique_items)
+            return []
+
+        f_status = st.sidebar.multiselect("Reading Status", sorted(df[col_map["Status"]].unique()))
+        f_source = st.sidebar.multiselect("Source", sorted(df[col_map["Source"]].unique()))
+        f_owned = st.sidebar.multiselect("Owned?", sorted(df[col_map["Owned"]].unique()))
+        f_primary = add_split_filter("Primary Genre", col_map["Primary"])
+        f_secondary = add_split_filter("Secondary Genre(s)", col_map["Secondary"])
+        f_tropes = add_split_filter("Tropes", col_map["Tropes"])
+
+        if f_status: filtered_df = filtered_df[filtered_df[col_map["Status"]].isin(f_status)]
+        if f_source: filtered_df = filtered_df[filtered_df[col_map["Source"]].isin(f_source)]
+        if f_owned: filtered_df = filtered_df[filtered_df[col_map["Owned"]].isin(f_owned)]
+        
+        # Split matching for Genres/Tropes
+        for f_list, col in [(f_primary, col_map["Primary"]), (f_secondary, col_map["Secondary"]), (f_tropes, col_map["Tropes"])]:
+            if f_list:
+                pat = '|'.join(f_list)
+                filtered_df = filtered_df[filtered_df[col].astype(str).str.contains(pat, case=False, na=False)]
+
+        # --- SEARCH & SORT ---
+        col_s1, col_s2 = st.columns([2, 1])
+        with col_s1:
+            search = st.text_input("🔍 Search Title or Author", placeholder="Type to search...")
+            if search:
+                filtered_df = filtered_df[filtered_df[col_map["Title"]].str.contains(search, case=False) | filtered_df[col_map["Author"]].str.contains(search, case=False)]
+        with col_s2:
+            sort_opt = st.selectbox("Sort By:", ["Newest Added", "Title (A to Z)", "Title (Z to A)"])
+            if "A to Z" in sort_opt: filtered_df = filtered_df.sort_values(col_map["Title"])
+            elif "Z to A" in sort_opt: filtered_df = filtered_df.sort_values(col_map["Title"], ascending=False)
+            else: filtered_df = filtered_df.sort_values(col_map["Timestamp"], ascending=False)
+
+        # --- MODAL ---
         @st.dialog("Book Details", width="large")
         def show_modal(row):
             st.markdown("<div class='book-header'>BOOK VIEW</div>", unsafe_allow_html=True)
@@ -143,64 +154,36 @@ if 'sheet_conn' in st.session_state:
             with c1:
                 st.subheader(row[col_map["Title"]])
                 st.write(f"*{row[col_map['Author']]}*")
-                img = row.get(col_map["Cover"]) or "https://via.placeholder.com/300"
-                st.image(img, use_container_width=True)
-                
-                # Fixed Star Logic
+                st.image(row.get(col_map["Cover"]) or "https://via.placeholder.com/300", use_container_width=True)
                 st.write("Rating")
                 rating_val = str(row[col_map["Rating"]]).count('★')
                 new_rating = st.feedback("stars", key=f"stars_{row['real_row_index']}")
-                
-                # Clean selection logic
-                final_stars = rating_val
-                if new_rating is not None:
-                    final_stars = new_rating + 1
-                
-                new_stat = st.selectbox("Status", ["To Read", "Reading", "Read", "DNF"], 
-                                        index=["To Read", "Reading", "Read", "DNF"].index(row[col_map["Status"]]) if row[col_map["Status"]] in ["To Read", "Reading", "Read", "DNF"] else 0)
-
+                final_stars = (new_rating + 1) if new_rating is not None else rating_val
+                new_stat = st.selectbox("Status", ["To Read", "Reading", "Read", "DNF"], index=["To Read", "Reading", "Read", "DNF"].index(row[col_map["Status"]]) if row[col_map["Status"]] in ["To Read", "Reading", "Read", "DNF"] else 0)
             with c2:
                 new_p = st.text_area("Primary Genre", value=row[col_map["Primary"]])
                 new_s = st.text_area("Secondary Genre(s)", value=row[col_map["Secondary"]])
                 new_t = st.text_area("Tropes", value=row[col_map["Tropes"]])
                 new_rev = st.text_area("Reviews", value=row[col_map["Review"]], height=150)
-
             col_del, col_save = st.columns(2)
-            if col_del.button("🗑️ Remove Book"):
+            if col_del.button("🗑️ Remove Book", type="secondary"):
                 ws.delete_rows(int(row['real_row_index']))
-                st.toast("Deleted!")
-                st.rerun()
-                
+                st.toast("Deleted!"); st.rerun()
             if col_save.button("💾 Save Changes", type="primary"):
-                r_idx = int(row['real_row_index'])
-                # Helper to find column letters/indices
                 headers = ws.row_values(1)
-                
-                def update_ws(col_name, val):
-                    try:
-                        c_idx = headers.index(col_name) + 1
-                        ws.update_cell(r_idx, c_idx, val)
+                def up(c, v):
+                    try: ws.update_cell(int(row['real_row_index']), headers.index(c)+1, v)
                     except: pass
+                up(col_map["Status"], new_stat); up(col_map["Rating"], "★" * final_stars)
+                up(col_map["Primary"], new_p); up(col_map["Secondary"], new_s)
+                up(col_map["Tropes"], new_t); up(col_map["Review"], new_rev)
+                st.toast("Saved!"); st.rerun()
 
-                update_ws(col_map["Status"], new_stat)
-                update_ws(col_map["Rating"], "★" * final_stars)
-                update_ws(col_map["Primary"], new_p)
-                update_ws(col_map["Secondary"], new_s)
-                update_ws(col_map["Tropes"], new_t)
-                update_ws(col_map["Review"], new_rev)
-                
-                st.toast("Saved!")
-                st.rerun()
-
-        # --- GRID VIEW ---
+        # --- GRID ---
         st.write(f"**Showing {len(filtered_df)} books**")
-        grid_cols = st.columns(5)
+        grid = st.columns(5)
         for i, (idx, row) in enumerate(filtered_df.iterrows()):
-            with grid_cols[i % 5]:
-                img = row.get(col_map["Cover"]) or "https://via.placeholder.com/300"
-                st.image(img, use_container_width=True)
-                if st.button(row[col_map["Title"]], key=f"grid_{idx}"):
-                    show_modal(row)
-
-    except Exception as e:
-        st.error(f"Error loading sheet: {e}")
+            with grid[i % 5]:
+                st.image(row.get(col_map["Cover"]) or "https://via.placeholder.com/300", use_container_width=True)
+                if st.button(row[col_map["Title"]], key=f"g_{idx}"): show_modal(row)
+    except Exception as e: st.error(f"Error: {e}")
