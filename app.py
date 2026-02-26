@@ -52,7 +52,21 @@ st.markdown("""
         text-transform: uppercase;
     }
 
-    /* 4. CLEANUP */
+    /* 4. SIDEBAR CONNECT BUTTON */
+    /* Make the primary button pop! */
+    button[kind="primary"] {
+        background-color: #5b8aed !important;
+        border: none !important;
+        color: white !important;
+        font-weight: bold !important;
+        transition: 0.3s;
+    }
+    button[kind="primary"]:hover {
+        background-color: #4a7ac9 !important;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+
+    /* 5. CLEANUP */
     .css-15zrgzn {display: none}
     div[data-testid="stFeedback"] { justify-content: center; }
 </style>
@@ -98,11 +112,19 @@ st.sidebar.title("📚 Library")
 
 if 'sheet_conn' not in st.session_state:
     st.sidebar.markdown("### 🔌 Connect")
-    st.sidebar.info(f"**Step 1:** Share Sheet with:")
-    st.sidebar.code(bot_email, language="text")
-    sheet_url = st.sidebar.text_input("**Step 2:** Sheet URL", placeholder="https://docs.google.com/...")
     
-    if st.sidebar.button("Connect"):
+    # STEP 1: BLUE BOX
+    st.sidebar.info("**Step 1:** Share your Google Sheet with this email:")
+    st.sidebar.code(bot_email, language="text")
+    
+    # STEP 2: BLUE BOX (Visual Match)
+    st.sidebar.info("**Step 2:** Paste your Google Sheet Link below:")
+    sheet_url = st.sidebar.text_input("Sheet URL", placeholder="https://docs.google.com/...", label_visibility="collapsed")
+    
+    st.sidebar.markdown("---")
+    
+    # BUTTON: STANDOUT (Primary)
+    if st.sidebar.button("🔌 Connect Library", type="primary"):
         if sheet_url:
             sheet, error = connect_to_sheet(sheet_url)
             if sheet:
@@ -112,7 +134,7 @@ if 'sheet_conn' not in st.session_state:
             else:
                 st.sidebar.error(f"Failed: {error}")
 else:
-    if st.sidebar.button("🔄 Refresh"):
+    if st.sidebar.button("🔄 Refresh Data"):
         st.cache_data.clear()
         st.rerun()
     
@@ -269,14 +291,11 @@ if 'sheet_conn' in st.session_state:
                 filtered_df[col_date] = pd.to_datetime(filtered_df[col_date], errors='coerce')
                 filtered_df = filtered_df.sort_values(by=col_date, ascending=asc)
 
-        # --- DEFINE MODAL FUNCTION (Using @st.dialog) ---
-        # We define this ONCE, outside the loop.
+        # --- DEFINE MODAL ---
         @st.dialog("Book Details")
         def show_book_modal(book_row):
-            # HEADER
             st.markdown(f"<div class='book-header'>BOOK VIEW</div>", unsafe_allow_html=True)
             
-            # LAYOUT
             c1, c2 = st.columns([1, 1.5], gap="large")
             
             with c1:
@@ -293,7 +312,6 @@ if 'sheet_conn' in st.session_state:
                 if len(img_url) > 5:
                     st.image(img_url, use_container_width=True)
                 
-                # RATING
                 st.caption("Rating")
                 raw_rating = book_row.get(col_map['Rating'], 0)
                 if isinstance(raw_rating, str):
@@ -301,12 +319,9 @@ if 'sheet_conn' in st.session_state:
                 else:
                     curr_stars = int(raw_rating) if raw_rating else 0
                 
-                # Setup Feedback
-                default_idx = curr_stars - 1 if curr_stars > 0 else None
                 new_star_idx = st.feedback("stars", key="modal_stars")
                 final_stars = new_star_idx + 1 if new_star_idx is not None else curr_stars
 
-                # STATUS
                 st.caption("Status")
                 opts = ["To Read", "Reading", "Read", "DNF"]
                 curr = book_row.get(col_map['Status'], 'To Read')
@@ -337,7 +352,6 @@ if 'sheet_conn' in st.session_state:
                     
                     rating_str = "★" * final_stars if final_stars > 0 else ""
                     
-                    # Updates
                     if col_map['Series']: ws.update_cell(r, get_idx(col_map['Series']), s_name)
                     if col_map['SeriesNum']: ws.update_cell(r, get_idx(col_map['SeriesNum']), s_num)
                     if col_map['Date']: ws.update_cell(r, get_idx(col_map['Date']), new_date)
@@ -357,15 +371,12 @@ if 'sheet_conn' in st.session_state:
                 except Exception as e:
                     st.error(f"Save failed: {e}")
 
-        # --- GRID VIEW (FIXED) ---
+        # --- GRID VIEW ---
         st.markdown(f"**Showing {len(filtered_df)} books**")
-        
         cols = st.columns(5)
         
-        # KEY FIX: Use enumerate to fill columns 0, 1, 2, 3, 4 sequentially
-        # regardless of the original dataframe index
         for i, (index, row) in enumerate(filtered_df.iterrows()):
-            col = cols[i % 5] # This fills gaps properly
+            col = cols[i % 5]
             with col:
                 c_cover = col_map.get("Cover")
                 img_url = str(row[c_cover]).strip() if c_cover else ""
@@ -377,8 +388,6 @@ if 'sheet_conn' in st.session_state:
                 c_title = col_map["Title"]
                 title_txt = str(row[c_title]) if c_title else "Untitled"
                 
-                # KEY FIX: Call modal directly inside button check
-                # Do NOT use a persistent session state for opening logic
                 if st.button(title_txt, key=f"btn_{index}"):
                     show_book_modal(row)
 
