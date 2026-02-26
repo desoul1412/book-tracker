@@ -20,7 +20,6 @@ st.markdown("""
     }
     
     /* 2. TITLE BUTTON STYLING */
-    /* This makes the button look like a bold title label under the image */
     div[data-testid="stButton"] button {
         width: 100%;
         border: none !important;
@@ -36,10 +35,6 @@ st.markdown("""
         text-overflow: ellipsis !important;
     }
     div[data-testid="stButton"] button:hover {
-        color: #5b8aed !important;
-    }
-    div[data-testid="stButton"] button:focus {
-        box-shadow: none !important;
         color: #5b8aed !important;
     }
 
@@ -161,7 +156,7 @@ if 'sheet_conn' in st.session_state:
         col_map = {
             "Title": get_col_name(df, ["Title", "Book Title"]),
             "Author": get_col_name(df, ["Author", "Author Name"]),
-            "Status": get_col_name(df, ["Status", "Reading Status"]),
+            "Status": get_col_name(df, ["Status", "Reading Status", "State"]),
             "Cover": get_col_name(df, ["Cover", "Cover URL", "Image"]),
             "Rating": get_col_name(df, ["Rating", "My Rating", "Stars"]),
             "Source": get_col_name(df, ["Source", "Bought From"]),
@@ -174,6 +169,7 @@ if 'sheet_conn' in st.session_state:
             "Date": get_col_name(df, ["Date Finished", "Date Read"]),
             "Series": get_col_name(df, ["Series", "Series Name"]),
             "SeriesNum": get_col_name(df, ["Series #", "#"]),
+            "Timestamp": get_col_name(df, ["Timestamp", "Date Added", "Time"])
         }
 
         if col_map["Title"]:
@@ -182,20 +178,17 @@ if 'sheet_conn' in st.session_state:
 
         st.title(f"📖 {sheet.title}")
 
-        # --- FILTERS (Logic Updated for Split Values) ---
+        # --- FILTERS ---
         st.sidebar.markdown("---")
         st.sidebar.markdown("### 🔍 Filters")
         
         filtered_df = df.copy()
 
-        # Helper to get unique SINGLE items from comma-separated lists
         def get_unique_items(df, col_name):
             if not col_name: return []
-            # Split by comma, strip whitespace, explode into one list, get unique
             items = df[col_name].astype(str).str.split(',').explode().str.strip()
             return sorted([x for x in items.unique() if x and x.lower() != 'nan'])
 
-        # 1. Simple Filters (Source, Status, Owned) - No splitting needed usually
         def add_simple_filter(label, col_key):
             actual_col = col_map.get(col_key)
             if actual_col:
@@ -204,27 +197,26 @@ if 'sheet_conn' in st.session_state:
                 return sel, actual_col
             return [], None
 
-        # 2. Complex Filters (Genres, Tropes) - Split comma values
         def add_split_filter(label, col_key):
             actual_col = col_map.get(col_key)
             if actual_col:
-                # Get unique SINGLE tags
                 unique_tags = get_unique_items(df, actual_col)
                 selected_tags = st.sidebar.multiselect(label, unique_tags)
                 return selected_tags, actual_col
             return [], None
 
-        # --- APPLY FILTERS ---
-        sel_stat, col_stat = add_simple_filter("Status", "Status")
+        # 1. APPLY FILTERS
+        sel_stat, col_stat = add_simple_filter("Reading Status", "Status")
         if sel_stat: filtered_df = filtered_df[filtered_df[col_stat].isin(sel_stat)]
 
         sel_src, col_src = add_simple_filter("Source", "Source")
         if sel_src: filtered_df = filtered_df[filtered_df[col_src].isin(sel_src)]
 
+        sel_owned, col_owned = add_simple_filter("Owned?", "Owned")
+        if sel_owned: filtered_df = filtered_df[filtered_df[col_owned].isin(sel_owned)]
+
         sel_prime, col_prime = add_split_filter("Primary Genre", "Primary")
         if sel_prime: 
-            # Check if ANY of the selected tags exist in the row's string
-            # We create a regex pattern like "Romance|Fantasy" and search
             pattern = '|'.join(sel_prime)
             filtered_df = filtered_df[filtered_df[col_prime].astype(str).str.contains(pattern, case=False, na=False)]
 
@@ -248,7 +240,37 @@ if 'sheet_conn' in st.session_state:
                 filtered_df[c_author].astype(str).str.contains(search_query, case=False, na=False)
             ]
 
-        # --- GRID VIEW (Fixed) ---
+        # --- SORTING LOGIC (NEW) ---
+        sort_option = st.selectbox("Sort By:", [
+            "Title (A to Z)", "Title (Z to A)",
+            "Rating (Highest to Lowest)", "Rating (Lowest to Highest)",
+            "Date Added (Newest to Oldest)", "Date Added (Oldest to Newest)"
+        ])
+
+        # Helper to convert stars to number for sorting
+        def parse_stars(val):
+            s = str(val)
+            return s.count('★') if '★' in s else (int(s) if s.isdigit() else 0)
+
+        if "Title" in sort_option:
+            asc = "A to Z" in sort_option
+            filtered_df = filtered_df.sort_values(by=col_map["Title"], ascending=asc)
+        
+        elif "Rating" in sort_option:
+            asc = "Lowest" in sort_option
+            col_rate = col_map["Rating"]
+            if col_rate:
+                filtered_df['_tmp_rate'] = filtered_df[col_rate].apply(parse_stars)
+                filtered_df = filtered_df.sort_values(by='_tmp_rate', ascending=asc)
+        
+        elif "Date Added" in sort_option:
+            asc = "Oldest" in sort_option
+            col_date = col_map["Timestamp"]
+            if col_date:
+                filtered_df[col_date] = pd.to_datetime(filtered_df[col_date], errors='coerce')
+                filtered_df = filtered_df.sort_values(by=col_date, ascending=asc)
+
+        # --- GRID VIEW ---
         st.markdown(f"**Showing {len(filtered_df)} books**")
         
         cols = st.columns(5)
@@ -256,20 +278,16 @@ if 'sheet_conn' in st.session_state:
         for idx, row in filtered_df.iterrows():
             col = cols[idx % 5]
             with col:
-                # 1. IMAGE (Fixed Height)
                 c_cover = col_map.get("Cover")
                 img_url = str(row[c_cover]).strip() if c_cover else ""
                 if len(img_url) < 5 or not img_url.startswith('http'):
                     img_url = "https://via.placeholder.com/300x450?text=No+Cover"
                 
-                # We simply display the image. The user will click the Title Button below.
                 st.image(img_url, use_container_width=True)
                 
-                # 2. TITLE (ACTS AS THE BUTTON)
                 c_title = col_map["Title"]
                 title_txt = str(row[c_title]) if c_title else "Untitled"
                 
-                # Clicking this button opens the modal
                 if st.button(title_txt, key=f"btn_{idx}"):
                     st.session_state['selected_book'] = row
                     st.session_state['show_modal'] = True
@@ -299,7 +317,6 @@ if 'sheet_conn' in st.session_state:
                     if len(img_url) > 5:
                         st.image(img_url, use_container_width=True)
                     
-                    # RATING
                     st.caption("Rating")
                     raw_rating = book.get(col_map['Rating'], 0)
                     if isinstance(raw_rating, str):
@@ -307,12 +324,10 @@ if 'sheet_conn' in st.session_state:
                     else:
                         curr_stars = int(raw_rating) if raw_rating else 0
                     
-                    # Feedback returns 0-4 index. If 0 stars, use None? No, keep simple.
                     default_idx = curr_stars - 1 if curr_stars > 0 else None
                     new_star_idx = st.feedback("stars", key="modal_stars")
                     final_stars = new_star_idx + 1 if new_star_idx is not None else curr_stars
 
-                    # STATUS
                     st.caption("Status")
                     opts = ["To Read", "Reading", "Read", "DNF"]
                     curr = book.get(col_map['Status'], 'To Read')
