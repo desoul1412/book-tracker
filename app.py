@@ -7,32 +7,43 @@ from datetime import datetime
 # --- CONFIG ---
 st.set_page_config(page_title="Library Manager", layout="wide", page_icon="📚")
 
-# --- CUSTOM CSS (Styling) ---
+# --- CUSTOM CSS ---
 st.markdown("""
 <style>
-    /* 1. FORCE UNIFORM BOOK COVERS IN GRID */
-    /* This targets images inside the main grid to specific dimensions */
+    /* 1. UNIFORM COVERS & ALIGNMENT */
     div[data-testid="stImage"] img {
-        height: 250px !important;  /* Fixed Height */
-        object-fit: cover !important; /* Crop nicely, don't stretch */
-        border-radius: 8px; /* Rounded corners */
+        height: 300px !important;
+        object-fit: cover !important;
+        border-radius: 8px;
         width: 100% !important;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    
+    /* 2. TITLE BUTTON STYLING */
+    /* This makes the button look like a bold title label under the image */
+    div[data-testid="stButton"] button {
+        width: 100%;
+        border: none !important;
+        background: transparent !important;
+        color: #2d3748 !important;
+        font-weight: 800 !important;
+        font-size: 15px !important;
+        text-align: center !important;
+        padding: 5px 0 !important;
+        margin-top: 5px !important;
+        white-space: nowrap !important; 
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+    }
+    div[data-testid="stButton"] button:hover {
+        color: #5b8aed !important;
+    }
+    div[data-testid="stButton"] button:focus {
+        box-shadow: none !important;
+        color: #5b8aed !important;
     }
 
-    /* 2. CENTERED & BOLD TITLES */
-    .book-title-card {
-        text-align: center;
-        font-weight: 800;
-        font-size: 14px;
-        margin-top: 5px;
-        margin-bottom: 10px;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis; /* Add "..." if too long */
-        color: #2d3748;
-    }
-
-    /* 3. BLUE HEADER FOR MODAL */
+    /* 3. MODAL HEADER */
     .book-header {
         background-color: #5b8aed;
         color: white;
@@ -43,19 +54,12 @@ st.markdown("""
         font-size: 24px;
         border-radius: 8px 8px 0 0;
         margin-bottom: 20px;
-        letter-spacing: 2px;
         text-transform: uppercase;
     }
-    
-    /* 4. SIDEBAR FILTERS */
-    .filter-label {
-        font-weight: bold;
-        color: #5b8aed;
-        margin-top: 10px;
-    }
-    
-    /* Hide anchor links */
+
+    /* 4. CLEANUP */
     .css-15zrgzn {display: none}
+    div[data-testid="stFeedback"] { justify-content: center; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -95,16 +99,15 @@ def get_col_name(df, possible_names):
     return None
 
 # --- SIDEBAR ---
-st.sidebar.title("📚 Library Manager")
+st.sidebar.title("📚 Library")
 
 if 'sheet_conn' not in st.session_state:
     st.sidebar.markdown("### 🔌 Connect")
-    st.sidebar.info(f"**Step 1:** Share your Google Sheet with this email:")
+    st.sidebar.info(f"**Step 1:** Share Sheet with:")
     st.sidebar.code(bot_email, language="text")
-    st.sidebar.markdown("**Step 2:** Paste your Sheet Link:")
-    sheet_url = st.sidebar.text_input("Google Sheet URL", placeholder="https://docs.google.com/...")
+    sheet_url = st.sidebar.text_input("**Step 2:** Sheet URL", placeholder="https://docs.google.com/...")
     
-    if st.sidebar.button("Connect Library"):
+    if st.sidebar.button("Connect"):
         if sheet_url:
             sheet, error = connect_to_sheet(sheet_url)
             if sheet:
@@ -112,20 +115,20 @@ if 'sheet_conn' not in st.session_state:
                 st.session_state['sheet_url'] = sheet_url
                 st.rerun()
             else:
-                st.sidebar.error(f"Connection Failed: {error}")
+                st.sidebar.error(f"Failed: {error}")
 else:
-    if st.sidebar.button("🔄 Refresh Data"):
+    if st.sidebar.button("🔄 Refresh"):
         st.cache_data.clear()
         st.rerun()
     
-    with st.sidebar.expander("➕ Add New Book", expanded=False):
+    with st.sidebar.expander("➕ Add Book", expanded=False):
         with st.form("add_book_form"):
             new_title = st.text_input("Title *")
             new_author = st.text_input("Author *")
             new_cover = st.text_input("Cover URL")
             new_status = st.selectbox("Status", ["To Read", "Reading", "Read", "DNF"])
             
-            if st.form_submit_button("Add to Shelf"):
+            if st.form_submit_button("Add"):
                 try:
                     sheet = st.session_state['sheet_conn']
                     ws = sheet.worksheet("Form Responses")
@@ -179,60 +182,62 @@ if 'sheet_conn' in st.session_state:
 
         st.title(f"📖 {sheet.title}")
 
-        # --- FILTERS ---
+        # --- FILTERS (Logic Updated for Split Values) ---
         st.sidebar.markdown("---")
         st.sidebar.markdown("### 🔍 Filters")
         
         filtered_df = df.copy()
 
-        def add_sidebar_filter(label, col_key):
+        # Helper to get unique SINGLE items from comma-separated lists
+        def get_unique_items(df, col_name):
+            if not col_name: return []
+            # Split by comma, strip whitespace, explode into one list, get unique
+            items = df[col_name].astype(str).str.split(',').explode().str.strip()
+            return sorted([x for x in items.unique() if x and x.lower() != 'nan'])
+
+        # 1. Simple Filters (Source, Status, Owned) - No splitting needed usually
+        def add_simple_filter(label, col_key):
             actual_col = col_map.get(col_key)
             if actual_col:
-                options = sorted([str(x) for x in df[actual_col].unique() if str(x).strip() != ""])
-                selected = st.sidebar.multiselect(label, options)
-                return selected, actual_col
+                opts = sorted([str(x) for x in df[actual_col].unique() if str(x).strip() != ""])
+                sel = st.sidebar.multiselect(label, opts)
+                return sel, actual_col
             return [], None
 
-        sel_source, col_source = add_sidebar_filter("Source", "Source")
-        if sel_source: filtered_df = filtered_df[filtered_df[col_source].isin(sel_source)]
+        # 2. Complex Filters (Genres, Tropes) - Split comma values
+        def add_split_filter(label, col_key):
+            actual_col = col_map.get(col_key)
+            if actual_col:
+                # Get unique SINGLE tags
+                unique_tags = get_unique_items(df, actual_col)
+                selected_tags = st.sidebar.multiselect(label, unique_tags)
+                return selected_tags, actual_col
+            return [], None
 
-        sel_prime, col_prime = add_sidebar_filter("Primary Genre", "Primary")
-        if sel_prime: filtered_df = filtered_df[filtered_df[col_prime].isin(sel_prime)]
+        # --- APPLY FILTERS ---
+        sel_stat, col_stat = add_simple_filter("Status", "Status")
+        if sel_stat: filtered_df = filtered_df[filtered_df[col_stat].isin(sel_stat)]
 
-        sel_sec, col_sec = add_sidebar_filter("Secondary Genre(s)", "Secondary")
-        if sel_sec: filtered_df = filtered_df[filtered_df[col_sec].isin(sel_sec)]
+        sel_src, col_src = add_simple_filter("Source", "Source")
+        if sel_src: filtered_df = filtered_df[filtered_df[col_src].isin(sel_src)]
 
-        sel_tropes, col_tropes = add_sidebar_filter("Tropes", "Tropes")
-        if sel_tropes: filtered_df = filtered_df[filtered_df[col_tropes].isin(sel_tropes)]
+        sel_prime, col_prime = add_split_filter("Primary Genre", "Primary")
+        if sel_prime: 
+            # Check if ANY of the selected tags exist in the row's string
+            # We create a regex pattern like "Romance|Fantasy" and search
+            pattern = '|'.join(sel_prime)
+            filtered_df = filtered_df[filtered_df[col_prime].astype(str).str.contains(pattern, case=False, na=False)]
+
+        sel_sec, col_sec = add_split_filter("Secondary Genre(s)", "Secondary")
+        if sel_sec: 
+            pattern = '|'.join(sel_sec)
+            filtered_df = filtered_df[filtered_df[col_sec].astype(str).str.contains(pattern, case=False, na=False)]
+
+        sel_tropes, col_tropes = add_split_filter("Tropes", "Tropes")
+        if sel_tropes: 
+            pattern = '|'.join(sel_tropes)
+            filtered_df = filtered_df[filtered_df[col_tropes].astype(str).str.contains(pattern, case=False, na=False)]
         
-        # STAR RATING FILTER (Updated to Clickable Stars)
-        col_rating = col_map.get("Rating")
-        if col_rating:
-            # Parse stars to numbers
-            def parse_rating(val):
-                s = str(val)
-                return s.count('★') if '★' in s else (int(s) if s.isdigit() else 0)
-            
-            filtered_df['temp_rating'] = filtered_df[col_rating].apply(parse_rating)
-            
-            st.sidebar.caption("Min Rating")
-            # Using st.feedback as an input for filtering
-            min_stars = st.sidebar.feedback("stars", key="filter_stars")
-            
-            # If user picks 3 stars, show books with >= 3 stars. (None means no filter)
-            if min_stars is not None:
-                # st.feedback returns 0-4 index usually, let's map it correctly.
-                # Actually st.feedback returns integer of stars clicked (e.g. 1 star = 0 index? No, usually 1-5 logic in feedback). 
-                # Let's adjust: In st.feedback, 1st star = 0, 5th star = 4. So we add 1.
-                threshold = min_stars + 1
-                filtered_df = filtered_df[filtered_df['temp_rating'] >= threshold]
-
-        sel_owned, col_owned = add_sidebar_filter("Owned?", "Owned")
-        if sel_owned: filtered_df = filtered_df[filtered_df[col_owned].isin(sel_owned)]
-
-        sel_status, col_status = add_sidebar_filter("Reading Status", "Status")
-        if sel_status: filtered_df = filtered_df[filtered_df[col_status].isin(sel_status)]
-
         # --- SEARCH ---
         search_query = st.text_input("🔎 Search Title or Author", "")
         if search_query:
@@ -243,41 +248,40 @@ if 'sheet_conn' in st.session_state:
                 filtered_df[c_author].astype(str).str.contains(search_query, case=False, na=False)
             ]
 
-        # --- GRID VIEW (Fixed Covers & Titles) ---
+        # --- GRID VIEW (Fixed) ---
         st.markdown(f"**Showing {len(filtered_df)} books**")
+        
         cols = st.columns(5)
         
         for idx, row in filtered_df.iterrows():
             col = cols[idx % 5]
             with col:
-                # 1. COVER IMAGE
+                # 1. IMAGE (Fixed Height)
                 c_cover = col_map.get("Cover")
                 img_url = str(row[c_cover]).strip() if c_cover else ""
                 if len(img_url) < 5 or not img_url.startswith('http'):
-                    img_url = "https://via.placeholder.com/150?text=No+Cover"
+                    img_url = "https://via.placeholder.com/300x450?text=No+Cover"
                 
+                # We simply display the image. The user will click the Title Button below.
                 st.image(img_url, use_container_width=True)
                 
-                # 2. CENTERED TITLE
+                # 2. TITLE (ACTS AS THE BUTTON)
                 c_title = col_map["Title"]
                 title_txt = str(row[c_title]) if c_title else "Untitled"
-                st.markdown(f"<div class='book-title-card'>{title_txt}</div>", unsafe_allow_html=True)
                 
-                # 3. BUTTON (Full Width)
-                if st.button("Edit", key=f"btn_{idx}"):
+                # Clicking this button opens the modal
+                if st.button(title_txt, key=f"btn_{idx}"):
                     st.session_state['selected_book'] = row
                     st.session_state['show_modal'] = True
                     st.rerun()
 
-        # --- MODAL (BOOK VIEW) ---
+        # --- MODAL ---
         if st.session_state.get('show_modal') and 'selected_book' in st.session_state:
             book = st.session_state['selected_book']
-            c_title = col_map["Title"]
-            title_display = book[c_title] if c_title else "Book View"
-
-            @st.dialog(f"{title_display}")
+            
+            @st.dialog("Book View")
             def show_edit_modal():
-                st.markdown("<div class='book-header'>BOOK VIEW</div>", unsafe_allow_html=True)
+                st.markdown(f"<div class='book-header'>BOOK VIEW</div>", unsafe_allow_html=True)
                 
                 c1, c2 = st.columns([1, 1.5], gap="large")
                 
@@ -286,10 +290,8 @@ if 'sheet_conn' in st.session_state:
                     st.markdown(f"*{book.get(col_map['Author'], 'Unknown')}*")
                     
                     col_s1, col_s2 = st.columns([1, 3])
-                    s_num_val = str(book.get(col_map['SeriesNum'], ''))
-                    s_name_val = str(book.get(col_map['Series'], ''))
-                    s_num = col_s1.text_input("#", value=s_num_val)
-                    s_name = col_s2.text_input("Series", value=s_name_val)
+                    s_num = col_s1.text_input("#", value=str(book.get(col_map['SeriesNum'], '')))
+                    s_name = col_s2.text_input("Series", value=str(book.get(col_map['Series'], '')))
                     
                     st.markdown("---")
                     
@@ -297,34 +299,25 @@ if 'sheet_conn' in st.session_state:
                     if len(img_url) > 5:
                         st.image(img_url, use_container_width=True)
                     
-                    # --- CLICKABLE STARS (EDITABLE) ---
+                    # RATING
                     st.caption("Rating")
                     raw_rating = book.get(col_map['Rating'], 0)
                     if isinstance(raw_rating, str):
-                        start_rating = raw_rating.count('★') if '★' in raw_rating else (int(raw_rating) if raw_rating.isdigit() else 0)
+                        curr_stars = raw_rating.count('★') if '★' in raw_rating else (int(raw_rating) if raw_rating.isdigit() else 0)
                     else:
-                        start_rating = int(raw_rating) if raw_rating else 0
+                        curr_stars = int(raw_rating) if raw_rating else 0
                     
-                    # Convert to 0-4 index for st.feedback
-                    default_star_idx = start_rating - 1 if start_rating > 0 else 0
-                    if start_rating == 0: default_star_idx = None # No stars selected
-                    
+                    # Feedback returns 0-4 index. If 0 stars, use None? No, keep simple.
+                    default_idx = curr_stars - 1 if curr_stars > 0 else None
                     new_star_idx = st.feedback("stars", key="modal_stars")
-                    
-                    # If user hasn't clicked yet, we don't have a value. 
-                    # Streamlit logic for pre-filling st.feedback isn't "default_value", 
-                    # it relies on session state. But to keep it simple, we just read the input.
-                    # Logic: If new_star_idx is None, keep old rating. If clicked, use new.
-                    final_rating = start_rating
-                    if new_star_idx is not None:
-                        final_rating = new_star_idx + 1
+                    final_stars = new_star_idx + 1 if new_star_idx is not None else curr_stars
 
                     # STATUS
                     st.caption("Status")
-                    status_opts = ["To Read", "Reading", "Read", "DNF"]
-                    curr_stat = book.get(col_map['Status'], 'To Read')
-                    safe_idx = status_opts.index(curr_stat) if curr_stat in status_opts else 0
-                    new_status = st.selectbox("Status", status_opts, index=safe_idx, label_visibility="collapsed")
+                    opts = ["To Read", "Reading", "Read", "DNF"]
+                    curr = book.get(col_map['Status'], 'To Read')
+                    idx_stat = opts.index(curr) if curr in opts else 0
+                    new_stat = st.selectbox("Status", opts, index=idx_stat, label_visibility="collapsed")
 
                 with c2:
                     r1a, r1b = st.columns(2)
@@ -335,35 +328,33 @@ if 'sheet_conn' in st.session_state:
                     new_fmt = r2a.text_input("FORMAT", value=str(book.get(col_map['Format'], '')))
                     new_src = r2b.text_input("SOURCE", value=str(book.get(col_map['Source'], '')))
                     
-                    new_prime = st.text_area("PRIMARY GENRE", value=str(book.get(col_map['Primary'], '')), height=68)
-                    new_sec = st.text_area("SECONDARY GENRE", value=str(book.get(col_map['Secondary'], '')), height=100)
-                    new_tropes = st.text_area("TROPES", value=str(book.get(col_map['Tropes'], '')), height=80)
-                    new_review = st.text_area("MY REVIEW", value=str(book.get(col_map['Review'], '')), height=150)
+                    new_p = st.text_area("PRIMARY GENRE", value=str(book.get(col_map['Primary'], '')), height=70)
+                    new_s = st.text_area("SECONDARY GENRE", value=str(book.get(col_map['Secondary'], '')), height=100)
+                    new_t = st.text_area("TROPES", value=str(book.get(col_map['Tropes'], '')), height=80)
+                    new_r = st.text_area("MY REVIEW", value=str(book.get(col_map['Review'], '')), height=150)
 
                 st.markdown("---")
-                col_close, col_save = st.columns([1, 1])
+                _, col_save = st.columns([1, 1])
                 
                 if col_save.button("💾 Save Changes", type="primary"):
                     try:
                         r = book['real_row_index']
+                        def get_idx(name): return df.columns.get_loc(name) + 1
                         
-                        def get_col_idx(col_name):
-                            return df.columns.get_loc(col_name) + 1
+                        rating_str = "★" * final_stars if final_stars > 0 else ""
                         
-                        rating_to_save = "★" * final_rating if final_rating > 0 else ""
-                        
-                        if col_map['Series']: ws.update_cell(r, get_col_idx(col_map['Series']), s_name)
-                        if col_map['SeriesNum']: ws.update_cell(r, get_col_idx(col_map['SeriesNum']), s_num)
-                        if col_map['Date']: ws.update_cell(r, get_col_idx(col_map['Date']), new_date)
-                        if col_map['Owned']: ws.update_cell(r, get_col_idx(col_map['Owned']), new_owned)
-                        if col_map['Format']: ws.update_cell(r, get_col_idx(col_map['Format']), new_fmt)
-                        if col_map['Source']: ws.update_cell(r, get_col_idx(col_map['Source']), new_src)
-                        if col_map['Primary']: ws.update_cell(r, get_col_idx(col_map['Primary']), new_prime)
-                        if col_map['Secondary']: ws.update_cell(r, get_col_idx(col_map['Secondary']), new_sec)
-                        if col_map['Tropes']: ws.update_cell(r, get_col_idx(col_map['Tropes']), new_tropes)
-                        if col_map['Review']: ws.update_cell(r, get_col_idx(col_map['Review']), new_review)
-                        if col_map['Status']: ws.update_cell(r, get_col_idx(col_map['Status']), new_status)
-                        if col_map['Rating']: ws.update_cell(r, get_col_idx(col_map['Rating']), rating_to_save)
+                        if col_map['Series']: ws.update_cell(r, get_idx(col_map['Series']), s_name)
+                        if col_map['SeriesNum']: ws.update_cell(r, get_idx(col_map['SeriesNum']), s_num)
+                        if col_map['Date']: ws.update_cell(r, get_idx(col_map['Date']), new_date)
+                        if col_map['Owned']: ws.update_cell(r, get_idx(col_map['Owned']), new_owned)
+                        if col_map['Format']: ws.update_cell(r, get_idx(col_map['Format']), new_fmt)
+                        if col_map['Source']: ws.update_cell(r, get_idx(col_map['Source']), new_src)
+                        if col_map['Primary']: ws.update_cell(r, get_idx(col_map['Primary']), new_p)
+                        if col_map['Secondary']: ws.update_cell(r, get_idx(col_map['Secondary']), new_s)
+                        if col_map['Tropes']: ws.update_cell(r, get_idx(col_map['Tropes']), new_t)
+                        if col_map['Review']: ws.update_cell(r, get_idx(col_map['Review']), new_r)
+                        if col_map['Status']: ws.update_cell(r, get_idx(col_map['Status']), new_stat)
+                        if col_map['Rating']: ws.update_cell(r, get_idx(col_map['Rating']), rating_str)
                         
                         st.success("Saved!")
                         st.session_state['show_modal'] = False
