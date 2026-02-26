@@ -10,7 +10,6 @@ st.set_page_config(page_title="My Book Shelf", layout="wide", page_icon="📚")
 # --- CUSTOM CSS ---
 st.markdown("""
 <style>
-    /* 1. UNIFORM COVERS */
     div[data-testid="stImage"] img {
         height: 300px !important;
         object-fit: cover !important;
@@ -18,8 +17,6 @@ st.markdown("""
         width: 100% !important;
         box-shadow: 0 4px 6px rgba(0,0,0,0.1);
     }
-    
-    /* 2. TITLE BUTTON STYLING */
     div[data-testid="stButton"] button {
         width: 100%;
         border: none !important;
@@ -37,22 +34,17 @@ st.markdown("""
     div[data-testid="stButton"] button:hover {
         color: #5b8aed !important;
     }
-
-    /* 3. MODAL HEADER */
     .book-header {
         background-color: #5b8aed;
         color: white;
         padding: 15px;
         text-align: center;
-        font-family: 'Arial', sans-serif;
         font-weight: bold;
         font-size: 24px;
         border-radius: 8px 8px 0 0;
         margin-bottom: 20px;
         text-transform: uppercase;
     }
-
-    /* 4. SIDEBAR STYLING */
     button[kind="primary"] {
         background-color: #5b8aed !important;
         border: none !important;
@@ -64,8 +56,6 @@ st.markdown("""
         background-color: #4a7ac9 !important;
         box-shadow: 0 4px 8px rgba(0,0,0,0.2);
     }
-    
-    /* 5. DELETE BUTTON STYLING */
     button[kind="secondary"] {
         border-color: #fc8181 !important;
         color: #c53030 !important;
@@ -74,8 +64,6 @@ st.markdown("""
         background-color: #fff5f5 !important;
         border-color: #c53030 !important;
     }
-    
-    /* 6. CLEANUP */
     .css-15zrgzn {display: none}
     div[data-testid="stFeedback"] { justify-content: center; }
 </style>
@@ -110,18 +98,42 @@ def connect_to_sheet(sheet_url):
     except Exception as e:
         return None, str(e)
 
+# --- HELPER: FIND DATA SHEET ---
+def get_data_sheet(sheet):
+    """Finds the sheet that actually contains the book data."""
+    # 1. Try "Form Responses"
+    for ws in sheet.worksheets():
+        if "form responses" in ws.title.lower():
+            return ws
+    
+    # 2. Smart Search: Look for a sheet with 'Title' in row 1
+    for ws in sheet.worksheets():
+        try:
+            headers = [h.lower() for h in ws.row_values(1)]
+            if "title" in headers or "book title" in headers:
+                return ws
+        except:
+            continue
+            
+    # 3. Fallback
+    return sheet.get_worksheet(0)
+
+# --- HELPER: COLUMN MAPPING ---
+def get_col_name(df_columns, possible_names):
+    for col in df_columns:
+        if col.strip().lower() in [p.lower() for p in possible_names]:
+            return col
+    return None
+
 # --- SIDEBAR ---
 st.sidebar.title("📚 My Book Shelf")
 
 if 'sheet_conn' not in st.session_state:
     st.sidebar.markdown("### 🔌 Connect")
-    
-    st.sidebar.info("**Step 1:** Share your Google Sheet with this email:")
+    st.sidebar.info("**Step 1:** Share Sheet with (as EDITOR):")
     st.sidebar.code(bot_email, language="text")
-    
-    st.sidebar.info("**Step 2:** Paste your Google Sheet Link below:")
+    st.sidebar.info("**Step 2:** Paste Sheet URL:")
     sheet_url = st.sidebar.text_input("Sheet URL", placeholder="https://docs.google.com/...", label_visibility="collapsed")
-    
     st.sidebar.markdown("---")
     
     if st.sidebar.button("🔌 Connect Library", type="primary"):
@@ -149,96 +161,81 @@ else:
             if st.form_submit_button("Add"):
                 try:
                     sheet = st.session_state['sheet_conn']
-                    target_ws = None
-                    for ws in sheet.worksheets():
-                        if "form responses" in ws.title.lower():
-                            target_ws = ws
-                            break
-                    if not target_ws: target_ws = sheet.get_worksheet(0)
+                    ws = get_data_sheet(sheet) # USE SMART FINDER
 
-                    headers = target_ws.row_values(1)
+                    headers = ws.row_values(1)
                     new_row = [""] * len(headers) 
 
-                    def get_idx(name):
+                    # Smart Index Finder (Fuzzy Match)
+                    def find_col_idx(possible_names):
                         for i, h in enumerate(headers):
-                            if h.strip().lower() == name.lower():
+                            if h.strip().lower() in [p.lower() for p in possible_names]:
                                 return i
                         return -1
 
-                    # MAP COLUMNS
-                    idx_time = get_idx("Timestamp")
+                    # MAP TO COLUMNS
+                    idx_time = find_col_idx(["Timestamp", "Date Added", "Time"])
                     if idx_time >= 0: new_row[idx_time] = str(datetime.now())
 
-                    idx_title = get_idx("Title")
+                    idx_title = find_col_idx(["Title", "Book Title"])
                     if idx_title >= 0: new_row[idx_title] = new_title
 
-                    idx_auth = get_idx("Author")
+                    idx_auth = find_col_idx(["Author", "Author Name"])
                     if idx_auth >= 0: new_row[idx_auth] = new_author
 
-                    idx_stat = get_idx("Reading Status")
+                    idx_stat = find_col_idx(["Reading Status", "Status", "State"])
                     if idx_stat >= 0: new_row[idx_stat] = new_status
 
-                    idx_cover = get_idx("Cover URL")
-                    if idx_cover == -1: idx_cover = get_idx("URL #1")
+                    idx_cover = find_col_idx(["Cover URL", "Cover", "Image", "URL #1", "URL"])
                     if idx_cover >= 0: new_row[idx_cover] = new_cover
 
-                    target_ws.append_row(new_row)
-                    st.success(f"Book added to '{target_ws.title}'!")
+                    # APPEND
+                    ws.append_row(new_row)
+                    st.success(f"Added to '{ws.title}'!")
                     st.cache_data.clear()
                     st.rerun()
                 except Exception as e:
-                    st.error(f"Error adding book: {e}")
+                    if "403" in str(e):
+                        st.error("🚨 Permission Denied! You must share the Google Sheet with the bot email as an **EDITOR**, not just a Viewer.")
+                    else:
+                        st.error(f"Error: {e}")
 
 # --- MAIN APP ---
 if 'sheet_conn' in st.session_state:
     try:
         sheet = st.session_state['sheet_conn']
+        ws = get_data_sheet(sheet) # Use same smart finder
         
-        # READ DATA
-        target_ws = None
-        for ws in sheet.worksheets():
-            if "form responses" in ws.title.lower():
-                target_ws = ws
-                break
-        if not target_ws: target_ws = sheet.get_worksheet(0)
-        
-        data = target_ws.get_all_records()
+        data = ws.get_all_records()
         df = pd.DataFrame(data)
 
         # EXACT COLUMN MAPPING
         col_map = {
-            "Title": "Title",
-            "Author": "Author",
-            "Status": "Reading Status",
-            "Cover": "Cover URL",
-            "Cover_Alt": "URL #1",
-            "Rating": "Rating",
-            "Source": "Source",
-            "Primary": "Primary Genre",
-            "Secondary": "Secondary Genre(s)",
-            "Tropes": "Tropes",
-            "Owned": "Owned?",
-            "Review": "Reviews",
-            "Format": "Format",
-            "Date": "Date Finished",
-            "Series": "Series Name",
-            "SeriesNum": "Number in Series",
-            "Timestamp": "Timestamp"
+            "Title": get_col_name(df.columns, ["Title", "Book Title"]),
+            "Author": get_col_name(df.columns, ["Author", "Author Name"]),
+            "Status": get_col_name(df.columns, ["Reading Status", "Status"]),
+            "Cover": get_col_name(df.columns, ["Cover URL", "Cover", "Image"]),
+            "Cover_Alt": get_col_name(df.columns, ["URL #1", "URL"]),
+            "Rating": get_col_name(df.columns, ["Rating", "My Rating", "Stars"]),
+            "Source": get_col_name(df.columns, ["Source", "Bought From"]),
+            "Primary": get_col_name(df.columns, ["Primary Genre", "Genre 1"]),
+            "Secondary": get_col_name(df.columns, ["Secondary Genre(s)", "Secondary Genre"]),
+            "Tropes": get_col_name(df.columns, ["Tropes", "Tags"]),
+            "Owned": get_col_name(df.columns, ["Owned?", "Owned"]),
+            "Review": get_col_name(df.columns, ["Reviews", "Review", "My Review"]),
+            "Format": get_col_name(df.columns, ["Format"]),
+            "Date": get_col_name(df.columns, ["Date Finished", "Date Read"]),
+            "Series": get_col_name(df.columns, ["Series Name", "Series"]),
+            "SeriesNum": get_col_name(df.columns, ["Number in Series", "Series #"]),
+            "Timestamp": get_col_name(df.columns, ["Timestamp", "Date Added"])
         }
 
-        # Check for Title
-        if col_map["Title"] not in df.columns:
-            st.error(f"Error: Column '{col_map['Title']}' not found in sheet. Found: {df.columns.tolist()}")
+        if not col_map["Title"]:
+            st.error(f"Error: Could not find 'Title' column in sheet '{ws.title}'. Headers found: {df.columns.tolist()}")
             st.stop()
             
         # Clean Empty Rows
         df = df[df[col_map["Title"]].astype(str).str.strip() != '']
-        # We need to map the dataframe index back to the Google Sheet row number.
-        # Header is row 1. First data row is row 2.
-        # df index starts at 0. So row = index + 2.
-        # BUT get_all_records might skip empty rows? No, it usually keeps them unless specified.
-        # To be safe with deletions, we calculate 'real_row_index' carefully.
-        # We'll assume the dataframe aligns perfectly with the sheet rows starting at row 2.
         df['real_row_index'] = df.index + 2 
 
         st.title(f"📖 {sheet.title}")
@@ -250,13 +247,13 @@ if 'sheet_conn' in st.session_state:
         filtered_df = df.copy()
 
         def get_unique_items(df, col_name):
-            if col_name not in df.columns: return []
+            if not col_name: return []
             items = df[col_name].astype(str).str.split(',').explode().str.strip()
             return sorted([x for x in items.unique() if x and x.lower() != 'nan'])
 
         def add_filter(label, col_key, split=False):
             actual_col = col_map.get(col_key)
-            if col_key == "Cover" and actual_col not in df.columns:
+            if col_key == "Cover" and not actual_col:
                 actual_col = col_map.get("Cover_Alt")
             
             if actual_col and actual_col in df.columns:
@@ -319,13 +316,13 @@ if 'sheet_conn' in st.session_state:
         elif "Rating" in sort_option:
             asc = "Lowest" in sort_option
             col_rate = col_map["Rating"]
-            if col_rate in df.columns:
+            if col_rate and col_rate in df.columns:
                 filtered_df['_tmp_rate'] = filtered_df[col_rate].apply(parse_stars)
                 filtered_df = filtered_df.sort_values(by='_tmp_rate', ascending=asc)
         elif "Date Added" in sort_option:
             asc = "Oldest" in sort_option
             col_date = col_map["Timestamp"]
-            if col_date in df.columns:
+            if col_date and col_date in df.columns:
                 filtered_df[col_date] = pd.to_datetime(filtered_df[col_date], errors='coerce')
                 filtered_df = filtered_df.sort_values(by=col_date, ascending=asc)
 
@@ -347,7 +344,7 @@ if 'sheet_conn' in st.session_state:
                 st.markdown("---")
                 
                 img_col = col_map["Cover"]
-                if img_col not in df.columns: img_col = col_map["Cover_Alt"]
+                if not img_col or img_col not in df.columns: img_col = col_map["Cover_Alt"]
                 img_url = str(book_row.get(img_col, '')).strip()
                 if len(img_url) > 5:
                     st.image(img_url, use_container_width=True)
@@ -386,26 +383,24 @@ if 'sheet_conn' in st.session_state:
             st.markdown("---")
             col_del, col_space, col_save = st.columns([1, 2, 1])
             
-            # --- DELETE FUNCTIONALITY ---
+            # DELETE BUTTON
             if col_del.button("🗑️ Delete", type="secondary"):
-                # Use a warning state in session to prevent accidental deletes
-                # But inside a dialog, reruns are tricky. We'll use a simpler confirmation approach.
-                st.warning("Are you sure? Click 'Confirm Delete' below.")
+                st.warning("Click confirm to delete this book permanently.")
                 st.session_state['confirm_delete'] = True
 
             if st.session_state.get('confirm_delete'):
                  if st.button("🚨 Confirm Delete", type="primary"):
                     try:
                         r = book_row['real_row_index']
-                        target_ws.delete_rows(r)
-                        st.success("Book Deleted!")
+                        ws.delete_rows(r)
+                        st.success("Deleted!")
                         st.session_state['confirm_delete'] = False
                         st.cache_data.clear()
                         st.rerun()
                     except Exception as e:
-                        st.error(f"Delete failed: {e}")
+                        st.error(f"Error: {e}")
 
-            # --- SAVE FUNCTIONALITY ---
+            # SAVE BUTTON
             if col_save.button("💾 Save Changes", type="primary"):
                 try:
                     r = book_row['real_row_index']
@@ -413,19 +408,19 @@ if 'sheet_conn' in st.session_state:
                     
                     rating_str = "★" * final_stars if final_stars > 0 else ""
                     
-                    # Updates
-                    if col_map['Series'] in df.columns: target_ws.update_cell(r, get_idx(col_map['Series']), s_name)
-                    if col_map['SeriesNum'] in df.columns: target_ws.update_cell(r, get_idx(col_map['SeriesNum']), s_num)
-                    if col_map['Date'] in df.columns: target_ws.update_cell(r, get_idx(col_map['Date']), new_date)
-                    if col_map['Owned'] in df.columns: target_ws.update_cell(r, get_idx(col_map['Owned']), new_owned)
-                    if col_map['Format'] in df.columns: target_ws.update_cell(r, get_idx(col_map['Format']), new_fmt)
-                    if col_map['Source'] in df.columns: target_ws.update_cell(r, get_idx(col_map['Source']), new_src)
-                    if col_map['Primary'] in df.columns: target_ws.update_cell(r, get_idx(col_map['Primary']), new_p)
-                    if col_map['Secondary'] in df.columns: target_ws.update_cell(r, get_idx(col_map['Secondary']), new_s)
-                    if col_map['Tropes'] in df.columns: target_ws.update_cell(r, get_idx(col_map['Tropes']), new_t)
-                    if col_map['Review'] in df.columns: target_ws.update_cell(r, get_idx(col_map['Review']), new_r)
-                    if col_map['Status'] in df.columns: target_ws.update_cell(r, get_idx(col_map['Status']), new_stat)
-                    if col_map['Rating'] in df.columns: target_ws.update_cell(r, get_idx(col_map['Rating']), rating_str)
+                    # Update Cells
+                    if col_map['Series'] in df.columns: ws.update_cell(r, get_idx(col_map['Series']), s_name)
+                    if col_map['SeriesNum'] in df.columns: ws.update_cell(r, get_idx(col_map['SeriesNum']), s_num)
+                    if col_map['Date'] in df.columns: ws.update_cell(r, get_idx(col_map['Date']), new_date)
+                    if col_map['Owned'] in df.columns: ws.update_cell(r, get_idx(col_map['Owned']), new_owned)
+                    if col_map['Format'] in df.columns: ws.update_cell(r, get_idx(col_map['Format']), new_fmt)
+                    if col_map['Source'] in df.columns: ws.update_cell(r, get_idx(col_map['Source']), new_src)
+                    if col_map['Primary'] in df.columns: ws.update_cell(r, get_idx(col_map['Primary']), new_p)
+                    if col_map['Secondary'] in df.columns: ws.update_cell(r, get_idx(col_map['Secondary']), new_s)
+                    if col_map['Tropes'] in df.columns: ws.update_cell(r, get_idx(col_map['Tropes']), new_t)
+                    if col_map['Review'] in df.columns: ws.update_cell(r, get_idx(col_map['Review']), new_r)
+                    if col_map['Status'] in df.columns: ws.update_cell(r, get_idx(col_map['Status']), new_stat)
+                    if col_map['Rating'] in df.columns: ws.update_cell(r, get_idx(col_map['Rating']), rating_str)
                     
                     st.success("Saved!")
                     st.cache_data.clear()
@@ -441,7 +436,7 @@ if 'sheet_conn' in st.session_state:
             col = cols[i % 5]
             with col:
                 c_cover = col_map["Cover"]
-                if c_cover not in df.columns: c_cover = col_map["Cover_Alt"]
+                if not c_cover or c_cover not in df.columns: c_cover = col_map["Cover_Alt"]
                 
                 img_url = str(row.get(c_cover, '')).strip()
                 if len(img_url) < 5 or not img_url.startswith('http'):
