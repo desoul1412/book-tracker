@@ -63,8 +63,8 @@ def connect_to_sheet(sheet_url):
 st.sidebar.title("📚 My Book Shelf")
 
 if 'sheet_conn' not in st.session_state:
-    st.sidebar.info(f"Step 1: Share Sheet with (Editor): {bot_email}")
-    sheet_url = st.sidebar.text_input("Step 2: Paste Sheet URL:")
+    st.sidebar.info(f"Share Sheet with (Editor): {bot_email}")
+    sheet_url = st.sidebar.text_input("Paste Sheet URL:")
     if st.sidebar.button("Connect Library", type="primary"):
         sheet, err = connect_to_sheet(sheet_url)
         if sheet:
@@ -73,7 +73,7 @@ if 'sheet_conn' not in st.session_state:
         else:
             st.sidebar.error(err)
 else:
-    # --- ADD BOOK (Writes to Form Responses) ---
+    # --- ADD BOOK ---
     with st.sidebar.expander("➕ Add Book", expanded=False):
         with st.form("add_book_form", clear_on_submit=True):
             new_title = st.text_input("Title *")
@@ -87,7 +87,6 @@ else:
                     headers = ws.row_values(1)
                     new_row = [""] * len(headers)
                     
-                    # Exact Mapping based on your provided column list
                     mapping = {
                         "Timestamp": str(datetime.now()),
                         "Author": new_author,
@@ -110,22 +109,18 @@ else:
 if 'sheet_conn' in st.session_state:
     try:
         ws = st.session_state['sheet_conn'].worksheet("Form Responses")
-        # Direct fetch (no cache) for live updates
         data = ws.get_all_records()
         df = pd.DataFrame(data)
         
-        # Exact Column Mapping
         col_map = {
             "Title": "Title", "Author": "Author", "Status": "Reading Status",
             "Cover": "Cover URL", "Rating": "Rating", "Source": "Source",
             "Primary": "Primary Genre", "Secondary": "Secondary Genre(s)",
             "Tropes": "Tropes", "Owned": "Owned?", "Review": "Reviews",
-            "Format": "Format", "Date": "Date Finished",
             "Series": "Series Name", "SeriesNum": "Number in Series",
             "Timestamp": "Timestamp"
         }
 
-        # Clean empty titles and track row indices
         df = df[df[col_map["Title"]].astype(str).str.strip() != ""]
         df['real_row_index'] = df.index + 2
 
@@ -133,11 +128,12 @@ if 'sheet_conn' in st.session_state:
         st.sidebar.markdown("---")
         filtered_df = df.copy()
         
-        # Simple search/sort implementation
-        sort_opt = st.selectbox("Sort By:", ["Title (A to Z)", "Title (Z to A)", "Newest Added"])
-        if "A to Z" in sort_opt: filtered_df = filtered_df.sort_values(col_map["Title"])
-        elif "Z to A" in sort_opt: filtered_df = filtered_df.sort_values(col_map["Title"], ascending=False)
-        else: filtered_df = filtered_df.sort_values(col_map["Timestamp"], ascending=False)
+        search = st.text_input("🔍 Search Title or Author")
+        if search:
+            filtered_df = filtered_df[
+                filtered_df[col_map["Title"]].str.contains(search, case=False) |
+                filtered_df[col_map["Author"]].str.contains(search, case=False)
+            ]
 
         # --- MODAL DIALOG ---
         @st.dialog("Book Details", width="large")
@@ -150,44 +146,60 @@ if 'sheet_conn' in st.session_state:
                 img = row.get(col_map["Cover"]) or "https://via.placeholder.com/300"
                 st.image(img, use_container_width=True)
                 
-                # Clickable Rating
+                # Fixed Star Logic
+                st.write("Rating")
                 rating_val = str(row[col_map["Rating"]]).count('★')
-                new_rating = st.feedback("stars", key="f_stars")
-                final_stars = (new_rating + 1) if new_star_idx := new_rating is not None else rating_val
+                new_rating = st.feedback("stars", key=f"stars_{row['real_row_index']}")
+                
+                # Clean selection logic
+                final_stars = rating_val
+                if new_rating is not None:
+                    final_stars = new_rating + 1
                 
                 new_stat = st.selectbox("Status", ["To Read", "Reading", "Read", "DNF"], 
-                                        index=["To Read", "Reading", "Read", "DNF"].index(row[col_map["Status"]]))
+                                        index=["To Read", "Reading", "Read", "DNF"].index(row[col_map["Status"]]) if row[col_map["Status"]] in ["To Read", "Reading", "Read", "DNF"] else 0)
 
             with c2:
-                # Basic info fields
                 new_p = st.text_area("Primary Genre", value=row[col_map["Primary"]])
                 new_s = st.text_area("Secondary Genre(s)", value=row[col_map["Secondary"]])
                 new_t = st.text_area("Tropes", value=row[col_map["Tropes"]])
                 new_rev = st.text_area("Reviews", value=row[col_map["Review"]], height=150)
 
-            # Save / Delete Actions
             col_del, col_save = st.columns(2)
             if col_del.button("🗑️ Remove Book"):
                 ws.delete_rows(int(row['real_row_index']))
                 st.toast("Deleted!")
                 st.rerun()
+                
             if col_save.button("💾 Save Changes", type="primary"):
-                idx_func = lambda x: df.columns.get_loc(x) + 1
                 r_idx = int(row['real_row_index'])
-                ws.update_cell(r_idx, idx_func(col_map["Status"]), new_stat)
-                ws.update_cell(r_idx, idx_func(col_map["Rating"]), "★" * final_stars)
-                ws.update_cell(r_idx, idx_func(col_map["Review"]), new_rev)
+                # Helper to find column letters/indices
+                headers = ws.row_values(1)
+                
+                def update_ws(col_name, val):
+                    try:
+                        c_idx = headers.index(col_name) + 1
+                        ws.update_cell(r_idx, c_idx, val)
+                    except: pass
+
+                update_ws(col_map["Status"], new_stat)
+                update_ws(col_map["Rating"], "★" * final_stars)
+                update_ws(col_map["Primary"], new_p)
+                update_ws(col_map["Secondary"], new_s)
+                update_ws(col_map["Tropes"], new_t)
+                update_ws(col_map["Review"], new_rev)
+                
                 st.toast("Saved!")
                 st.rerun()
 
         # --- GRID VIEW ---
         st.write(f"**Showing {len(filtered_df)} books**")
-        cols = st.columns(5)
+        grid_cols = st.columns(5)
         for i, (idx, row) in enumerate(filtered_df.iterrows()):
-            with cols[i % 5]:
+            with grid_cols[i % 5]:
                 img = row.get(col_map["Cover"]) or "https://via.placeholder.com/300"
                 st.image(img, use_container_width=True)
-                if st.button(row[col_map["Title"]], key=f"btn_{idx}"):
+                if st.button(row[col_map["Title"]], key=f"grid_{idx}"):
                     show_modal(row)
 
     except Exception as e:
