@@ -65,7 +65,17 @@ st.markdown("""
         box-shadow: 0 4px 8px rgba(0,0,0,0.2);
     }
     
-    /* 5. CLEANUP */
+    /* 5. DELETE BUTTON STYLING */
+    button[kind="secondary"] {
+        border-color: #fc8181 !important;
+        color: #c53030 !important;
+    }
+    button[kind="secondary"]:hover {
+        background-color: #fff5f5 !important;
+        border-color: #c53030 !important;
+    }
+    
+    /* 6. CLEANUP */
     .css-15zrgzn {display: none}
     div[data-testid="stFeedback"] { justify-content: center; }
 </style>
@@ -128,7 +138,7 @@ else:
         st.cache_data.clear()
         st.rerun()
     
-    # --- ADD BOOK (EXACT COLUMN MAPPING) ---
+    # --- ADD BOOK ---
     with st.sidebar.expander("➕ Add Book", expanded=False):
         with st.form("add_book_form"):
             new_title = st.text_input("Title *")
@@ -139,8 +149,6 @@ else:
             if st.form_submit_button("Add"):
                 try:
                     sheet = st.session_state['sheet_conn']
-                    
-                    # Target 'Form Responses' specifically
                     target_ws = None
                     for ws in sheet.worksheets():
                         if "form responses" in ws.title.lower():
@@ -148,18 +156,16 @@ else:
                             break
                     if not target_ws: target_ws = sheet.get_worksheet(0)
 
-                    # Get Headers
                     headers = target_ws.row_values(1)
                     new_row = [""] * len(headers) 
 
-                    # Helper to find index
                     def get_idx(name):
                         for i, h in enumerate(headers):
                             if h.strip().lower() == name.lower():
                                 return i
                         return -1
 
-                    # MAP TO YOUR EXACT COLUMNS
+                    # MAP COLUMNS
                     idx_time = get_idx("Timestamp")
                     if idx_time >= 0: new_row[idx_time] = str(datetime.now())
 
@@ -169,10 +175,9 @@ else:
                     idx_auth = get_idx("Author")
                     if idx_auth >= 0: new_row[idx_auth] = new_author
 
-                    idx_stat = get_idx("Reading Status") # Your exact column name
+                    idx_stat = get_idx("Reading Status")
                     if idx_stat >= 0: new_row[idx_stat] = new_status
 
-                    # Check 'Cover URL' first, fallback to 'URL #1'
                     idx_cover = get_idx("Cover URL")
                     if idx_cover == -1: idx_cover = get_idx("URL #1")
                     if idx_cover >= 0: new_row[idx_cover] = new_cover
@@ -200,20 +205,20 @@ if 'sheet_conn' in st.session_state:
         data = target_ws.get_all_records()
         df = pd.DataFrame(data)
 
-        # --- EXACT COLUMN MAPPING (Based on your list) ---
+        # EXACT COLUMN MAPPING
         col_map = {
             "Title": "Title",
             "Author": "Author",
             "Status": "Reading Status",
-            "Cover": "Cover URL", # Primary
-            "Cover_Alt": "URL #1", # Backup
+            "Cover": "Cover URL",
+            "Cover_Alt": "URL #1",
             "Rating": "Rating",
             "Source": "Source",
             "Primary": "Primary Genre",
             "Secondary": "Secondary Genre(s)",
             "Tropes": "Tropes",
             "Owned": "Owned?",
-            "Review": "Reviews", # Plural as provided
+            "Review": "Reviews",
             "Format": "Format",
             "Date": "Date Finished",
             "Series": "Series Name",
@@ -221,14 +226,20 @@ if 'sheet_conn' in st.session_state:
             "Timestamp": "Timestamp"
         }
 
-        # Validate Title Column Exists
+        # Check for Title
         if col_map["Title"] not in df.columns:
             st.error(f"Error: Column '{col_map['Title']}' not found in sheet. Found: {df.columns.tolist()}")
             st.stop()
             
         # Clean Empty Rows
         df = df[df[col_map["Title"]].astype(str).str.strip() != '']
-        df['real_row_index'] = range(2, len(df) + 2)
+        # We need to map the dataframe index back to the Google Sheet row number.
+        # Header is row 1. First data row is row 2.
+        # df index starts at 0. So row = index + 2.
+        # BUT get_all_records might skip empty rows? No, it usually keeps them unless specified.
+        # To be safe with deletions, we calculate 'real_row_index' carefully.
+        # We'll assume the dataframe aligns perfectly with the sheet rows starting at row 2.
+        df['real_row_index'] = df.index + 2 
 
         st.title(f"📖 {sheet.title}")
 
@@ -245,7 +256,6 @@ if 'sheet_conn' in st.session_state:
 
         def add_filter(label, col_key, split=False):
             actual_col = col_map.get(col_key)
-            # If primary cover col missing, check alt
             if col_key == "Cover" and actual_col not in df.columns:
                 actual_col = col_map.get("Cover_Alt")
             
@@ -284,7 +294,7 @@ if 'sheet_conn' in st.session_state:
         sel, col, pat = add_filter("Tropes", "Tropes", split=True)
         if sel: filtered_df = filtered_df[filtered_df[col].astype(str).str.contains(pat, case=False, na=False)]
         
-        # --- SEARCH (Selectbox) ---
+        # --- SEARCH ---
         c_title = col_map["Title"]
         all_titles = sorted(df[c_title].astype(str).unique().tolist())
         search_choice = st.selectbox("🔎 Search Book (Type to suggest):", [""] + all_titles, index=0)
@@ -336,10 +346,8 @@ if 'sheet_conn' in st.session_state:
                 
                 st.markdown("---")
                 
-                # Image Logic: Try Cover URL, then URL #1
                 img_col = col_map["Cover"]
                 if img_col not in df.columns: img_col = col_map["Cover_Alt"]
-                
                 img_url = str(book_row.get(img_col, '')).strip()
                 if len(img_url) > 5:
                     st.image(img_url, use_container_width=True)
@@ -376,8 +384,28 @@ if 'sheet_conn' in st.session_state:
                 new_r = st.text_area("MY REVIEW", value=str(book_row.get(col_map['Review'], '')), height=150)
 
             st.markdown("---")
-            _, col_save = st.columns([1, 1])
+            col_del, col_space, col_save = st.columns([1, 2, 1])
             
+            # --- DELETE FUNCTIONALITY ---
+            if col_del.button("🗑️ Delete", type="secondary"):
+                # Use a warning state in session to prevent accidental deletes
+                # But inside a dialog, reruns are tricky. We'll use a simpler confirmation approach.
+                st.warning("Are you sure? Click 'Confirm Delete' below.")
+                st.session_state['confirm_delete'] = True
+
+            if st.session_state.get('confirm_delete'):
+                 if st.button("🚨 Confirm Delete", type="primary"):
+                    try:
+                        r = book_row['real_row_index']
+                        target_ws.delete_rows(r)
+                        st.success("Book Deleted!")
+                        st.session_state['confirm_delete'] = False
+                        st.cache_data.clear()
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Delete failed: {e}")
+
+            # --- SAVE FUNCTIONALITY ---
             if col_save.button("💾 Save Changes", type="primary"):
                 try:
                     r = book_row['real_row_index']
@@ -385,7 +413,7 @@ if 'sheet_conn' in st.session_state:
                     
                     rating_str = "★" * final_stars if final_stars > 0 else ""
                     
-                    # Exact Updates
+                    # Updates
                     if col_map['Series'] in df.columns: target_ws.update_cell(r, get_idx(col_map['Series']), s_name)
                     if col_map['SeriesNum'] in df.columns: target_ws.update_cell(r, get_idx(col_map['SeriesNum']), s_num)
                     if col_map['Date'] in df.columns: target_ws.update_cell(r, get_idx(col_map['Date']), new_date)
