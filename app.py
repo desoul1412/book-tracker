@@ -4,13 +4,13 @@ from oauth2client.service_account import ServiceAccountCredentials
 import pandas as pd
 from datetime import datetime
 
-# --- CONFIG (Renamed to 'My Book Shelf') ---
+# --- CONFIG ---
 st.set_page_config(page_title="My Book Shelf", layout="wide", page_icon="📚")
 
 # --- CUSTOM CSS ---
 st.markdown("""
 <style>
-    /* 1. UNIFORM COVERS & ALIGNMENT */
+    /* 1. UNIFORM COVERS */
     div[data-testid="stImage"] img {
         height: 300px !important;
         object-fit: cover !important;
@@ -100,13 +100,7 @@ def connect_to_sheet(sheet_url):
     except Exception as e:
         return None, str(e)
 
-def get_col_name(df, possible_names):
-    for col in df.columns:
-        if col.strip().lower() in [p.lower() for p in possible_names]:
-            return col
-    return None
-
-# --- SIDEBAR (Renamed) ---
+# --- SIDEBAR ---
 st.sidebar.title("📚 My Book Shelf")
 
 if 'sheet_conn' not in st.session_state:
@@ -134,7 +128,7 @@ else:
         st.cache_data.clear()
         st.rerun()
     
-    # --- SMART ADD BOOK FUNCTION ---
+    # --- ADD BOOK (EXACT COLUMN MAPPING) ---
     with st.sidebar.expander("➕ Add Book", expanded=False):
         with st.form("add_book_form"):
             new_title = st.text_input("Title *")
@@ -145,42 +139,46 @@ else:
             if st.form_submit_button("Add"):
                 try:
                     sheet = st.session_state['sheet_conn']
-                    # Try to get 'Form Responses', fallback to first sheet if renamed
-                    try:
-                        ws = sheet.worksheet("Form Responses")
-                    except:
-                        ws = sheet.get_worksheet(0)
+                    
+                    # Target 'Form Responses' specifically
+                    target_ws = None
+                    for ws in sheet.worksheets():
+                        if "form responses" in ws.title.lower():
+                            target_ws = ws
+                            break
+                    if not target_ws: target_ws = sheet.get_worksheet(0)
 
-                    # 1. READ HEADERS TO FIND CORRECT COLUMNS
-                    headers = ws.row_values(1) # Get first row
-                    new_row = [""] * len(headers) # Create empty row
+                    # Get Headers
+                    headers = target_ws.row_values(1)
+                    new_row = [""] * len(headers) 
 
-                    # Helper to find index of a column name
-                    def get_idx(possible_names):
+                    # Helper to find index
+                    def get_idx(name):
                         for i, h in enumerate(headers):
-                            if h.strip().lower() in [p.lower() for p in possible_names]:
+                            if h.strip().lower() == name.lower():
                                 return i
                         return -1
 
-                    # 2. MAP DATA TO CORRECT INDEX
-                    idx_time = get_idx(["Timestamp", "Date Added", "Time"])
+                    # MAP TO YOUR EXACT COLUMNS
+                    idx_time = get_idx("Timestamp")
                     if idx_time >= 0: new_row[idx_time] = str(datetime.now())
 
-                    idx_title = get_idx(["Title", "Book Title"])
+                    idx_title = get_idx("Title")
                     if idx_title >= 0: new_row[idx_title] = new_title
 
-                    idx_auth = get_idx(["Author", "Author Name"])
+                    idx_auth = get_idx("Author")
                     if idx_auth >= 0: new_row[idx_auth] = new_author
 
-                    idx_stat = get_idx(["Status", "Reading Status", "State"])
+                    idx_stat = get_idx("Reading Status") # Your exact column name
                     if idx_stat >= 0: new_row[idx_stat] = new_status
 
-                    idx_cover = get_idx(["Cover", "Cover URL", "Image"])
+                    # Check 'Cover URL' first, fallback to 'URL #1'
+                    idx_cover = get_idx("Cover URL")
+                    if idx_cover == -1: idx_cover = get_idx("URL #1")
                     if idx_cover >= 0: new_row[idx_cover] = new_cover
 
-                    # 3. APPEND
-                    ws.append_row(new_row)
-                    st.success("Book Added to Sheet!")
+                    target_ws.append_row(new_row)
+                    st.success(f"Book added to '{target_ws.title}'!")
                     st.cache_data.clear()
                     st.rerun()
                 except Exception as e:
@@ -190,41 +188,47 @@ else:
 if 'sheet_conn' in st.session_state:
     try:
         sheet = st.session_state['sheet_conn']
-        try:
-            ws = sheet.worksheet("Form Responses")
-        except:
-            ws = sheet.get_worksheet(0)
         
-        data = ws.get_all_records()
+        # READ DATA
+        target_ws = None
+        for ws in sheet.worksheets():
+            if "form responses" in ws.title.lower():
+                target_ws = ws
+                break
+        if not target_ws: target_ws = sheet.get_worksheet(0)
+        
+        data = target_ws.get_all_records()
         df = pd.DataFrame(data)
 
-        # MAPPING
+        # --- EXACT COLUMN MAPPING (Based on your list) ---
         col_map = {
-            "Title": get_col_name(df, ["Title", "Book Title"]),
-            "Author": get_col_name(df, ["Author", "Author Name"]),
-            "Status": get_col_name(df, ["Status", "Reading Status", "State"]),
-            "Cover": get_col_name(df, ["Cover", "Cover URL", "Image"]),
-            "Rating": get_col_name(df, ["Rating", "My Rating", "Stars"]),
-            "Source": get_col_name(df, ["Source", "Bought From"]),
-            "Primary": get_col_name(df, ["Primary Genre", "Genre 1"]),
-            "Secondary": get_col_name(df, ["Secondary Genre", "Secondary Genre(s)"]),
-            "Tropes": get_col_name(df, ["Tropes", "Tags"]),
-            "Owned": get_col_name(df, ["Owned", "Owned?"]),
-            "Review": get_col_name(df, ["Review", "My Review"]),
-            "Format": get_col_name(df, ["Format"]),
-            "Date": get_col_name(df, ["Date Finished", "Date Read"]),
-            "Series": get_col_name(df, ["Series", "Series Name"]),
-            "SeriesNum": get_col_name(df, ["Series #", "#"]),
-            "Timestamp": get_col_name(df, ["Timestamp", "Date Added", "Time"])
+            "Title": "Title",
+            "Author": "Author",
+            "Status": "Reading Status",
+            "Cover": "Cover URL", # Primary
+            "Cover_Alt": "URL #1", # Backup
+            "Rating": "Rating",
+            "Source": "Source",
+            "Primary": "Primary Genre",
+            "Secondary": "Secondary Genre(s)",
+            "Tropes": "Tropes",
+            "Owned": "Owned?",
+            "Review": "Reviews", # Plural as provided
+            "Format": "Format",
+            "Date": "Date Finished",
+            "Series": "Series Name",
+            "SeriesNum": "Number in Series",
+            "Timestamp": "Timestamp"
         }
 
-        # Validate Title Column
-        if col_map["Title"]:
-            df = df[df[col_map["Title"]].astype(str).str.strip() != '']
-            df['real_row_index'] = range(2, len(df) + 2)
-        else:
-            st.error("Error: Could not find a 'Title' column in your sheet.")
+        # Validate Title Column Exists
+        if col_map["Title"] not in df.columns:
+            st.error(f"Error: Column '{col_map['Title']}' not found in sheet. Found: {df.columns.tolist()}")
             st.stop()
+            
+        # Clean Empty Rows
+        df = df[df[col_map["Title"]].astype(str).str.strip() != '']
+        df['real_row_index'] = range(2, len(df) + 2)
 
         st.title(f"📖 {sheet.title}")
 
@@ -235,58 +239,54 @@ if 'sheet_conn' in st.session_state:
         filtered_df = df.copy()
 
         def get_unique_items(df, col_name):
-            if not col_name: return []
+            if col_name not in df.columns: return []
             items = df[col_name].astype(str).str.split(',').explode().str.strip()
             return sorted([x for x in items.unique() if x and x.lower() != 'nan'])
 
-        def add_simple_filter(label, col_key):
+        def add_filter(label, col_key, split=False):
             actual_col = col_map.get(col_key)
-            if actual_col:
-                opts = sorted([str(x) for x in df[actual_col].unique() if str(x).strip() != ""])
-                sel = st.sidebar.multiselect(label, opts)
-                return sel, actual_col
-            return [], None
+            # If primary cover col missing, check alt
+            if col_key == "Cover" and actual_col not in df.columns:
+                actual_col = col_map.get("Cover_Alt")
+            
+            if actual_col and actual_col in df.columns:
+                if split:
+                    opts = get_unique_items(df, actual_col)
+                    sel = st.sidebar.multiselect(label, opts)
+                    if sel:
+                        pat = '|'.join(sel)
+                        return sel, actual_col, pat
+                else:
+                    opts = sorted([str(x) for x in df[actual_col].unique() if str(x).strip() != ""])
+                    sel = st.sidebar.multiselect(label, opts)
+                    if sel: return sel, actual_col, None
+            return None, None, None
 
-        def add_split_filter(label, col_key):
-            actual_col = col_map.get(col_key)
-            if actual_col:
-                unique_tags = get_unique_items(df, actual_col)
-                selected_tags = st.sidebar.multiselect(label, unique_tags)
-                return selected_tags, actual_col
-            return [], None
+        # Apply Filters
+        sel, col, _ = add_filter("Author", "Author")
+        if sel: filtered_df = filtered_df[filtered_df[col].isin(sel)]
 
-        # 1. SIDEBAR FILTERS
-        sel_auth, col_auth = add_simple_filter("Author", "Author")
-        if sel_auth: filtered_df = filtered_df[filtered_df[col_auth].isin(sel_auth)]
+        sel, col, _ = add_filter("Reading Status", "Status")
+        if sel: filtered_df = filtered_df[filtered_df[col].isin(sel)]
 
-        sel_stat, col_stat = add_simple_filter("Reading Status", "Status")
-        if sel_stat: filtered_df = filtered_df[filtered_df[col_stat].isin(sel_stat)]
+        sel, col, _ = add_filter("Source", "Source")
+        if sel: filtered_df = filtered_df[filtered_df[col].isin(sel)]
 
-        sel_src, col_src = add_simple_filter("Source", "Source")
-        if sel_src: filtered_df = filtered_df[filtered_df[col_src].isin(sel_src)]
+        sel, col, _ = add_filter("Owned?", "Owned")
+        if sel: filtered_df = filtered_df[filtered_df[col].isin(sel)]
 
-        sel_owned, col_owned = add_simple_filter("Owned?", "Owned")
-        if sel_owned: filtered_df = filtered_df[filtered_df[col_owned].isin(sel_owned)]
+        sel, col, pat = add_filter("Primary Genre", "Primary", split=True)
+        if sel: filtered_df = filtered_df[filtered_df[col].astype(str).str.contains(pat, case=False, na=False)]
 
-        sel_prime, col_prime = add_split_filter("Primary Genre", "Primary")
-        if sel_prime: 
-            pattern = '|'.join(sel_prime)
-            filtered_df = filtered_df[filtered_df[col_prime].astype(str).str.contains(pattern, case=False, na=False)]
+        sel, col, pat = add_filter("Secondary Genre(s)", "Secondary", split=True)
+        if sel: filtered_df = filtered_df[filtered_df[col].astype(str).str.contains(pat, case=False, na=False)]
 
-        sel_sec, col_sec = add_split_filter("Secondary Genre(s)", "Secondary")
-        if sel_sec: 
-            pattern = '|'.join(sel_sec)
-            filtered_df = filtered_df[filtered_df[col_sec].astype(str).str.contains(pattern, case=False, na=False)]
-
-        sel_tropes, col_tropes = add_split_filter("Tropes", "Tropes")
-        if sel_tropes: 
-            pattern = '|'.join(sel_tropes)
-            filtered_df = filtered_df[filtered_df[col_tropes].astype(str).str.contains(pattern, case=False, na=False)]
+        sel, col, pat = add_filter("Tropes", "Tropes", split=True)
+        if sel: filtered_df = filtered_df[filtered_df[col].astype(str).str.contains(pat, case=False, na=False)]
         
-        # --- SEARCH WITH SUGGESTIONS (Selectbox) ---
+        # --- SEARCH (Selectbox) ---
         c_title = col_map["Title"]
         all_titles = sorted(df[c_title].astype(str).unique().tolist())
-        
         search_choice = st.selectbox("🔎 Search Book (Type to suggest):", [""] + all_titles, index=0)
         
         if search_choice:
@@ -306,22 +306,20 @@ if 'sheet_conn' in st.session_state:
         if "Title" in sort_option:
             asc = "A to Z" in sort_option
             filtered_df = filtered_df.sort_values(by=col_map["Title"], ascending=asc)
-        
         elif "Rating" in sort_option:
             asc = "Lowest" in sort_option
             col_rate = col_map["Rating"]
-            if col_rate:
+            if col_rate in df.columns:
                 filtered_df['_tmp_rate'] = filtered_df[col_rate].apply(parse_stars)
                 filtered_df = filtered_df.sort_values(by='_tmp_rate', ascending=asc)
-        
         elif "Date Added" in sort_option:
             asc = "Oldest" in sort_option
             col_date = col_map["Timestamp"]
-            if col_date:
+            if col_date in df.columns:
                 filtered_df[col_date] = pd.to_datetime(filtered_df[col_date], errors='coerce')
                 filtered_df = filtered_df.sort_values(by=col_date, ascending=asc)
 
-        # --- DEFINE MODAL (Updated to LARGE width) ---
+        # --- MODAL ---
         @st.dialog("Book Details", width="large")
         def show_book_modal(book_row):
             st.markdown(f"<div class='book-header'>BOOK VIEW</div>", unsafe_allow_html=True)
@@ -338,7 +336,11 @@ if 'sheet_conn' in st.session_state:
                 
                 st.markdown("---")
                 
-                img_url = str(book_row.get(col_map['Cover'], '')).strip()
+                # Image Logic: Try Cover URL, then URL #1
+                img_col = col_map["Cover"]
+                if img_col not in df.columns: img_col = col_map["Cover_Alt"]
+                
+                img_url = str(book_row.get(img_col, '')).strip()
                 if len(img_url) > 5:
                     st.image(img_url, use_container_width=True)
                 
@@ -383,19 +385,19 @@ if 'sheet_conn' in st.session_state:
                     
                     rating_str = "★" * final_stars if final_stars > 0 else ""
                     
-                    # Updates
-                    if col_map['Series']: ws.update_cell(r, get_idx(col_map['Series']), s_name)
-                    if col_map['SeriesNum']: ws.update_cell(r, get_idx(col_map['SeriesNum']), s_num)
-                    if col_map['Date']: ws.update_cell(r, get_idx(col_map['Date']), new_date)
-                    if col_map['Owned']: ws.update_cell(r, get_idx(col_map['Owned']), new_owned)
-                    if col_map['Format']: ws.update_cell(r, get_idx(col_map['Format']), new_fmt)
-                    if col_map['Source']: ws.update_cell(r, get_idx(col_map['Source']), new_src)
-                    if col_map['Primary']: ws.update_cell(r, get_idx(col_map['Primary']), new_p)
-                    if col_map['Secondary']: ws.update_cell(r, get_idx(col_map['Secondary']), new_s)
-                    if col_map['Tropes']: ws.update_cell(r, get_idx(col_map['Tropes']), new_t)
-                    if col_map['Review']: ws.update_cell(r, get_idx(col_map['Review']), new_r)
-                    if col_map['Status']: ws.update_cell(r, get_idx(col_map['Status']), new_stat)
-                    if col_map['Rating']: ws.update_cell(r, get_idx(col_map['Rating']), rating_str)
+                    # Exact Updates
+                    if col_map['Series'] in df.columns: target_ws.update_cell(r, get_idx(col_map['Series']), s_name)
+                    if col_map['SeriesNum'] in df.columns: target_ws.update_cell(r, get_idx(col_map['SeriesNum']), s_num)
+                    if col_map['Date'] in df.columns: target_ws.update_cell(r, get_idx(col_map['Date']), new_date)
+                    if col_map['Owned'] in df.columns: target_ws.update_cell(r, get_idx(col_map['Owned']), new_owned)
+                    if col_map['Format'] in df.columns: target_ws.update_cell(r, get_idx(col_map['Format']), new_fmt)
+                    if col_map['Source'] in df.columns: target_ws.update_cell(r, get_idx(col_map['Source']), new_src)
+                    if col_map['Primary'] in df.columns: target_ws.update_cell(r, get_idx(col_map['Primary']), new_p)
+                    if col_map['Secondary'] in df.columns: target_ws.update_cell(r, get_idx(col_map['Secondary']), new_s)
+                    if col_map['Tropes'] in df.columns: target_ws.update_cell(r, get_idx(col_map['Tropes']), new_t)
+                    if col_map['Review'] in df.columns: target_ws.update_cell(r, get_idx(col_map['Review']), new_r)
+                    if col_map['Status'] in df.columns: target_ws.update_cell(r, get_idx(col_map['Status']), new_stat)
+                    if col_map['Rating'] in df.columns: target_ws.update_cell(r, get_idx(col_map['Rating']), rating_str)
                     
                     st.success("Saved!")
                     st.cache_data.clear()
@@ -410,8 +412,10 @@ if 'sheet_conn' in st.session_state:
         for i, (index, row) in enumerate(filtered_df.iterrows()):
             col = cols[i % 5]
             with col:
-                c_cover = col_map.get("Cover")
-                img_url = str(row[c_cover]).strip() if c_cover else ""
+                c_cover = col_map["Cover"]
+                if c_cover not in df.columns: c_cover = col_map["Cover_Alt"]
+                
+                img_url = str(row.get(c_cover, '')).strip()
                 if len(img_url) < 5 or not img_url.startswith('http'):
                     img_url = "https://via.placeholder.com/300x450?text=No+Cover"
                 
@@ -420,7 +424,6 @@ if 'sheet_conn' in st.session_state:
                 c_title = col_map["Title"]
                 title_txt = str(row[c_title]) if c_title else "Untitled"
                 
-                # Modal Trigger
                 if st.button(title_txt, key=f"btn_{index}"):
                     show_book_modal(row)
 
