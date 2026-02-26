@@ -69,12 +69,22 @@ if 'sheet_conn' in st.session_state:
             for idx, row in df.iterrows():
                 col = cols[idx % 5]
                 with col:
-                    img = row.get('Cover URL', 'https://via.placeholder.com/150')
-                    st.image(img, use_container_width=True)
+                    # --- FIXED IMAGE LOGIC ---
+                    raw_img = row.get('Cover URL')
                     
+                    # Check: Is it a string? Is it not empty? Does it start with http?
+                    if isinstance(raw_img, str) and len(raw_img) > 5 and raw_img.startswith("http"):
+                        img = raw_img
+                    else:
+                        # Use placeholder if URL is empty or broken
+                        img = "https://via.placeholder.com/150?text=No+Cover"
+
+                    st.image(img, use_container_width=True)
+                    # -------------------------
+            
                     if st.button(f"📖 {row.get('Title','Untitled')}", key=f"btn_{idx}"):
                         st.session_state['selected_book'] = row
-                        st.session_state['row_index'] = idx + 2 # Header is row 1
+                        st.session_state['row_index'] = idx + 2 
                         st.rerun()
 
         # --- EDIT MODAL ---
