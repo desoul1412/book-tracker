@@ -4,8 +4,8 @@ from oauth2client.service_account import ServiceAccountCredentials
 import pandas as pd
 from datetime import datetime
 
-# --- CONFIG ---
-st.set_page_config(page_title="Library Manager", layout="wide", page_icon="📚")
+# --- CONFIG (Renamed to 'My Book Shelf') ---
+st.set_page_config(page_title="My Book Shelf", layout="wide", page_icon="📚")
 
 # --- CUSTOM CSS ---
 st.markdown("""
@@ -106,8 +106,8 @@ def get_col_name(df, possible_names):
             return col
     return None
 
-# --- SIDEBAR ---
-st.sidebar.title("📚 Library")
+# --- SIDEBAR (Renamed) ---
+st.sidebar.title("📚 My Book Shelf")
 
 if 'sheet_conn' not in st.session_state:
     st.sidebar.markdown("### 🔌 Connect")
@@ -256,11 +256,9 @@ if 'sheet_conn' in st.session_state:
             filtered_df = filtered_df[filtered_df[col_tropes].astype(str).str.contains(pattern, case=False, na=False)]
         
         # --- SEARCH WITH SUGGESTIONS (Selectbox) ---
-        # We use selectbox to provide the dropdown/autocomplete behavior
         c_title = col_map["Title"]
         all_titles = sorted(df[c_title].astype(str).unique().tolist())
         
-        # Search Widget
         search_choice = st.selectbox("🔎 Search Book (Type to suggest):", [""] + all_titles, index=0)
         
         if search_choice:
@@ -295,8 +293,8 @@ if 'sheet_conn' in st.session_state:
                 filtered_df[col_date] = pd.to_datetime(filtered_df[col_date], errors='coerce')
                 filtered_df = filtered_df.sort_values(by=col_date, ascending=asc)
 
-        # --- DEFINE MODAL ---
-        @st.dialog("Book Details")
+        # --- DEFINE MODAL (Updated to LARGE width) ---
+        @st.dialog("Book Details", width="large")
         def show_book_modal(book_row):
             st.markdown(f"<div class='book-header'>BOOK VIEW</div>", unsafe_allow_html=True)
             
