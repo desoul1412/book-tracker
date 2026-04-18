@@ -1,7 +1,157 @@
 {
   "version": "1.0.0",
   "generated": "2026-04-18",
-  "characters": {},
-  "tiles": {},
-  "props": {}
+  "tiles": {
+    "floor-tech": {
+      "path": "assets/iso/tiles/floor-tech.png",
+      "pixellab_id": "8e75bf5a-cc08-4f20-920d-28798732284c",
+      "size": { "width": 64, "height": 64 },
+      "description": "dark charcoal navy floor tile with glowing cyan circuit board pathway lines, cyberpunk tech office"
+    },
+    "floor-server": {
+      "path": "assets/iso/tiles/floor-server.png",
+      "pixellab_id": "f5a6b57e-1d0f-4fb7-8b04-f4031235ce1e",
+      "size": { "width": 64, "height": 64 },
+      "description": "light grey polished concrete floor tile, clean elevated server room floor"
+    },
+    "floor-meeting": {
+      "path": "assets/iso/tiles/floor-meeting.png",
+      "pixellab_id": "7381bffd-57cf-4889-81c5-9c1441c6a4a3",
+      "size": { "width": 64, "height": 64 },
+      "description": "dark charcoal floor tile with subtle dark checkerboard pattern, office meeting room"
+    },
+    "floor-ceo": {
+      "path": "assets/iso/tiles/floor-ceo.png",
+      "pixellab_id": "c7226f3e-faa0-466c-9b1b-c51c9bdb0590",
+      "size": { "width": 64, "height": 64 },
+      "description": "premium dark polished floor tile with thin gold accent stripe, executive office"
+    },
+    "floor-kitchen": {
+      "path": "assets/iso/tiles/floor-kitchen.png",
+      "pixellab_id": "6873d699-3f51-4ca8-96e5-5a0a95354493",
+      "size": { "width": 64, "height": 64 },
+      "description": "light grey kitchen floor tile with subtle hexagonal grid texture, office breakroom"
+    },
+    "floor-lobby": {
+      "path": "assets/iso/tiles/floor-lobby.png",
+      "pixellab_id": "bd9c8510-02c1-4ba3-a9a9-4db34213aa2e",
+      "size": { "width": 64, "height": 64 },
+      "description": "dark charcoal entry floor tile with glowing blue directional guide lines, cyberpunk lobby"
+    }
+  },
+  "props": {
+    "desk-pc": {
+      "path": "assets/iso/props/desk-pc.png",
+      "pixellab_id": "02ceab4f-03ee-4bb7-92de-a32e1ba43ad2",
+      "size": { "width": 96, "height": 96 },
+      "interactive": true,
+      "hotspot": "agent-desk",
+      "description": "L-shaped office desk with dual monitors showing code terminals, cyberpunk"
+    },
+    "kanban-board": {
+      "path": "assets/iso/props/kanban-board.png",
+      "pixellab_id": "7ed4d7fe-10ff-45a5-8950-c6b83a7935fa",
+      "size": { "width": 128, "height": 128 },
+      "interactive": true,
+      "hotspot": "kanban",
+      "description": "three wall-mounted screens showing kanban board columns TODO IN PROGRESS DONE"
+    },
+    "server-rack": {
+      "path": "assets/iso/props/server-rack.png",
+      "pixellab_id": "5ed8456f-e430-4bd1-abfd-296f42eeae56",
+      "size": { "width": 64, "height": 64 },
+      "interactive": true,
+      "hotspot": "brain-server",
+      "description": "dark grey server rack tower with blinking green and blue LED lights"
+    },
+    "neon-sign-brain": {
+      "path": "assets/iso/props/neon-sign-brain.png",
+      "pixellab_id": "98c4e921-b68f-453b-ae87-ad14c6c31633",
+      "size": { "width": 128, "height": 128 },
+      "interactive": false,
+      "hotspot": null,
+      "description": "large glowing neon sign THE BRAIN in bright cyan neon tube letters, wall-mounted"
+    },
+    "control-console": {
+      "path": "assets/iso/props/control-console.png",
+      "pixellab_id": "64c3d17e-5269-42ed-a94e-3398d37ad106",
+      "size": { "width": 96, "height": 96 },
+      "interactive": true,
+      "hotspot": "qa-terminal",
+      "description": "curved control console workstation with multiple monitors and control panels, cyberpunk"
+    },
+    "chair": {
+      "path": "assets/iso/props/chair.png",
+      "pixellab_id": "a08c8ac4-4db7-4b2e-ba11-2f7b12d61d2b",
+      "size": { "width": 48, "height": 48 },
+      "interactive": false,
+      "hotspot": null,
+      "description": "purple magenta rolling office chair with five-wheel base"
+    },
+    "plant": {
+      "path": "assets/iso/props/plant.png",
+      "pixellab_id": "a9956b74-30ea-4bc9-9173-7790d611064b",
+      "size": { "width": 64, "height": 64 },
+      "interactive": false,
+      "hotspot": null,
+      "description": "large tropical potted plant with wide green leaves in a tall dark pot"
+    },
+    "bar-stool": {
+      "path": "assets/iso/props/bar-stool.png",
+      "pixellab_id": "d10dcf22-a1da-4e57-b291-4bcad3483adc",
+      "size": { "width": 40, "height": 40 },
+      "interactive": false,
+      "hotspot": null,
+      "description": "purple magenta bar stool with round padded seat and metal legs"
+    },
+    "bookshelf": {
+      "path": "assets/iso/props/bookshelf.png",
+      "pixellab_id": "0ead27a0-c3c4-4824-9b11-7bc4aef6ba34",
+      "size": { "width": 64, "height": 64 },
+      "interactive": false,
+      "hotspot": null,
+      "description": "tall bookshelf cabinet with rows of books and binders, dark shelving unit"
+    },
+    "reception-desk": {
+      "path": "assets/iso/props/reception-desk.png",
+      "pixellab_id": "dac85773-6f70-4ad2-88ca-d9dac09bbfe3",
+      "size": { "width": 96, "height": 96 },
+      "interactive": true,
+      "hotspot": "reception",
+      "description": "front reception desk counter with purple accent trim, dark surface, cyberpunk lobby"
+    },
+    "coffee-counter": {
+      "path": "assets/iso/props/coffee-counter.png",
+      "pixellab_id": null,
+      "size": null,
+      "interactive": false,
+      "hotspot": null,
+      "description": "dark kitchen counter with built-in espresso machine, steam, chrome finish — PENDING TOKEN 2"
+    },
+    "fridge": {
+      "path": "assets/iso/props/fridge.png",
+      "pixellab_id": null,
+      "size": null,
+      "interactive": false,
+      "hotspot": null,
+      "description": "dark office mini fridge with glowing interior light — PENDING TOKEN 2"
+    },
+    "vending-machine": {
+      "path": "assets/iso/props/vending-machine.png",
+      "pixellab_id": null,
+      "size": null,
+      "interactive": false,
+      "hotspot": null,
+      "description": "tall vending machine with neon cyan display, glowing buttons — PENDING TOKEN 2"
+    },
+    "sofa": {
+      "path": "assets/iso/props/sofa.png",
+      "pixellab_id": null,
+      "size": null,
+      "interactive": false,
+      "hotspot": null,
+      "description": "dark charcoal office sofa with purple accent cushions — PENDING TOKEN 2"
+    }
+  },
+  "characters": {}
 }
