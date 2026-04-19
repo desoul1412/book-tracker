@@ -1,0 +1,18 @@
+node_modules/
+dist/
+.env
+.env.local
+
+# Auth / secrets
+.mcp.json
+
+# Playwright state
+.playwright-mcp/
+
+# Temp screenshots
+office-*.png
+/tmp/
+
+# Editor
+.DS_Store
+*.swp

@@ -122,36 +122,109 @@
     },
     "coffee-counter": {
       "path": "assets/iso/props/coffee-counter.png",
-      "pixellab_id": null,
-      "size": null,
+      "pixellab_id": "82774312-146c-4bb2-a538-4d9b64708d6d",
+      "size": { "width": 96, "height": 96 },
       "interactive": false,
       "hotspot": null,
-      "description": "dark kitchen counter with built-in espresso machine, steam, chrome finish — PENDING TOKEN 2"
+      "description": "dark kitchen counter with built-in espresso machine, steam, chrome finish, cyberpunk office breakroom"
     },
     "fridge": {
       "path": "assets/iso/props/fridge.png",
-      "pixellab_id": null,
-      "size": null,
+      "pixellab_id": "7a6455af-5a9c-43b0-b002-7e0c28eae3bc",
+      "size": { "width": 64, "height": 64 },
       "interactive": false,
       "hotspot": null,
-      "description": "dark office mini fridge with glowing interior light — PENDING TOKEN 2"
+      "description": "dark office mini fridge with glowing blue-white interior light, sleek matte black exterior"
     },
     "vending-machine": {
       "path": "assets/iso/props/vending-machine.png",
-      "pixellab_id": null,
-      "size": null,
+      "pixellab_id": "eceeecc7-02d0-48c4-b7c0-6887dc3cb972",
+      "size": { "width": 64, "height": 64 },
       "interactive": false,
       "hotspot": null,
-      "description": "tall vending machine with neon cyan display, glowing buttons — PENDING TOKEN 2"
+      "description": "tall vending machine with neon cyan display panel, bright glowing buttons, dark matte body"
     },
     "sofa": {
       "path": "assets/iso/props/sofa.png",
-      "pixellab_id": null,
-      "size": null,
+      "pixellab_id": "4a88342e-6bc5-44a1-a1f6-150ab5899d6d",
+      "size": { "width": 96, "height": 96 },
       "interactive": false,
       "hotspot": null,
-      "description": "dark charcoal office sofa with purple accent cushions — PENDING TOKEN 2"
+      "description": "dark charcoal office sofa with purple accent cushions, modern sleek design"
     }
   },
-  "characters": {}
+  "characters": {
+    "ceo": {
+      "pixellab_id": "0c880e17-6093-4a64-8f32-228eaeb74d47",
+      "role": "CEO",
+      "size": 68,
+      "directions": 8,
+      "animations": ["walk", "idle", "drinking"],
+      "description": "chibi pixel art CEO, dark navy suit, gold tie, short dark hair, confident stance, cyberpunk office"
+    },
+    "cto": {
+      "pixellab_id": "0b466677-af30-4277-b997-531c5d946c2a",
+      "role": "CTO",
+      "size": 68,
+      "directions": 8,
+      "animations": ["walk", "idle", "drinking"],
+      "description": "chibi pixel art CTO, dark tech vest over turtleneck, silver glasses, short grey hair, cyberpunk office"
+    },
+    "pm": {
+      "pixellab_id": "91c73abd-268e-44af-8dc9-ebbae2a807e7",
+      "role": "PM",
+      "size": 68,
+      "directions": 8,
+      "animations": ["walk", "idle", "drinking"],
+      "description": "chibi pixel art project manager, smart casual blazer, wireless headset, holding clipboard, brown hair"
+    },
+    "designer": {
+      "pixellab_id": "6254e596-b174-4426-9206-269ee853fc5d",
+      "role": "Designer",
+      "size": 68,
+      "directions": 8,
+      "animations": ["walk", "idle", "drinking"],
+      "description": "chibi pixel art UI designer, colorful crop jacket, stylus pen, round pink glasses, purple-highlighted hair"
+    },
+    "frontend": {
+      "pixellab_id": "b894cb6f-7dfe-4c68-9c19-28ec02595943",
+      "role": "Frontend",
+      "size": 68,
+      "directions": 8,
+      "animations": ["walk", "idle", "drinking"],
+      "description": "chibi pixel art frontend developer, dark hoodie, large cyan headphones around neck, spiky hair"
+    },
+    "backend": {
+      "pixellab_id": "fdf5ed34-3e79-41b7-8a6f-de9db8781027",
+      "role": "Backend",
+      "size": 68,
+      "directions": 8,
+      "animations": ["walk", "idle", "drinking"],
+      "description": "chibi pixel art backend developer, dark hooded jacket, glowing green terminal glasses, messy dark hair"
+    },
+    "devops": {
+      "pixellab_id": "9b31b674-e6b5-432d-b792-991fc2496e62",
+      "role": "DevOps",
+      "size": 68,
+      "directions": 8,
+      "animations": ["walk", "idle", "drinking"],
+      "description": "chibi pixel art devops engineer, red visor, utility vest, cyberpunk style"
+    },
+    "qa": {
+      "pixellab_id": "96ba50f4-a398-4bf9-9f81-69b38a73add8",
+      "role": "QA",
+      "size": 68,
+      "directions": 8,
+      "animations": ["walk", "idle", "drinking"],
+      "description": "chibi pixel art QA tester, orange glasses, tablet, ponytail, cyberpunk style"
+    },
+    "researcher": {
+      "pixellab_id": "ab63368d-9637-4f6d-b56f-b230bc506d0c",
+      "role": "Researcher",
+      "size": 68,
+      "directions": 8,
+      "animations": ["walk", "idle", "drinking"],
+      "description": "chibi pixel art researcher, white coat, smart glasses, clipboard, cyberpunk style"
+    }
+  }
 }
