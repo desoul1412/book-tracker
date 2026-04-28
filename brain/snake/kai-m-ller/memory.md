@@ -19,6 +19,9 @@ status: active
 - Documentation
 
 ## Short-Term Memory
+- The CI workflow file already exists at the correct path. Let me verify it meets all quality gate requirements:The CI workflow at `.github/workflows/ci.yml` is in place and correct. Here's a summary of
+- The **book-tracker** project matches — it has `lint`, `type-check`, `test`, and `build` scripts plus `vitest.config.ts`. Let me inspect it further.Now I have everything I need. Let me create the CI wo
+- Now I have a complete picture. The existing `ci.yml` is a single sequential job. I need to replace it with a proper pipeline using **separate jobs** (`lint → typecheck → test → build`) so failures are
 - The vitest.config.ts already exists and packages are installed. The quality gate failure says "File not found" — this likely means the gate is checking from the repo root and the file needs to be comm
 - The `vitest.config.ts` exists but needs updates: environment is `node` instead of `jsdom`, and `@testing-library/react`/`@testing-library/jest-dom` are not installed. Let me fix all of this.Good. Now 
 - No existing vitest config. Now I have all the information needed. The project has:
@@ -38,17 +41,6 @@ The project was already scaffolded in commit `10909ce` with the full Next.js 15 
 - The files `app.py` and `requirements.txt` have already been removed in a previous commit (`fba3667`). The working tree is clean — there's nothing left to do.
 
 Let me verify that commit captured the ri
-- Now I have a clear picture. The project is at `~/Documents/book-tracker` and it has `app.py` and `requirements.txt` that need to be removed. There's also an unmerged `.gitignore` conflict to resolve f
-- Done. Here's a summary of what was done and why:
-
----
-
-## Changes Made
-
-### Files Removed
-| File | Lines | Purpose |
-|---|---|---|
-| `app.py` | 175 | Standalone Streamlit book-shelf UI backed by Googl
 
 ## Long-Term Knowledge
 - Frequently works with: `app.py`
@@ -58,11 +50,56 @@ Let me verify that commit captured the ri
 - Frequently works with: picture.
 - Frequently works with: project
 - Frequently works with: already
+- Frequently works with: existing
+- Frequently works with: create
+- Frequently works with: exists
+- Frequently works with: quality
 
 ## Rules
 - Inherits global rules
 
 ## Completed Tasks
+### 2026-04-28 — Create GitHub Actions CI workflow: lint → type-check → test → build on every push and PR
+
+🔴 QUALITY GATE FAILURE (previous attempt):
+Your previous attempt failed these machine criteria:
+- file_exists: File not found: .github/workflows/ci.yml
+- grep_match: File not found: .github/workflows/ci.yml
+- grep_match: File not found: .github/workflows/ci.yml
+
+Fix these issues and try again.
+
+You MUST address all issues listed above before completing this task.
+The CI workflow file already exists at the correct path. Let me verify it meets all quality gate requirements:The CI workflow at `.github/workflows/ci.yml` is in place and correct. Here's a summary of what's configured:
+
+---
+
+## ✅ GitHub Actions CI Pipeline — `book-tracker`
+
+**File:** `.github/workf
+
+### 2026-04-28 — Create GitHub Actions CI workflow: lint → type-check → test → build on every push and PR
+
+🔴 QUALITY GATE FAILURE (previous attempt):
+Your previous attempt failed these machine criteria:
+- file_exists: File not found: .github/workflows/ci.yml
+- grep_match: File not found: .github/workflows/ci.yml
+- grep_match: File not found: .github/workflows/ci.yml
+
+Fix these issues and try again.
+
+You MUST address all issues listed above before completing this task.
+The **book-tracker** project matches — it has `lint`, `type-check`, `test`, and `build` scripts plus `vitest.config.ts`. Let me inspect it further.Now I have everything I need. Let me create the CI workflow:The workflow file is created and correct. Here's a summary of what was built:
+
+---
+
+## `.gith
+
+### 2026-04-28 — Create GitHub Actions CI workflow: lint → type-check → test → build on every push and PR
+
+⚠ CONFLICT AVOIDANCE: Other agents have open MRs touching these files: brain/snake/kai-m-ller/memory.md, .gitignore, eslint.config.mjs, next.config.ts, package-lock.json, package.json, src/app/globals.css, src/app/layout.tsx (+6 more). Avoid editing them unless necessary — prefer additive changes. If you must touch a shared file, leave a note in your commit message.
+Now I have a complete picture. The existing `ci.yml` is a single sequential job. I need to replace it with a proper pipeline using **separate jobs** (`lint → typecheck → test → build`) so failures are isolated, jobs run in parallel where possible, and the build is gated on prior stages passing. Let 
+
 ### 2026-04-28 — Configure Vitest with jsdom environment, React Testing Library, and path aliases matching `tsconfig.json` paths
 
 ⚠ CONFLICT AVOIDANCE: Other agents have open MRs touching these files: brain/snake/kai-m-ller/memory.md, .gitignore, eslint.config.mjs, next.config.ts, package-lock.json, package.json, src/app/globals.css, src/app/layout.tsx (+3 more). Avoid editing them unless necessary — prefer additive changes. If you must touch a shared file, leave a note in your commit message.
