@@ -16,8 +16,14 @@ status: active
 - React
 - CSS/Tailwind
 - Build Tools
+- Documentation
 
 ## Short-Term Memory
+- The vitest.config.ts already exists and packages are installed. The quality gate failure says "File not found" — this likely means the gate is checking from the repo root and the file needs to be comm
+- The `vitest.config.ts` exists but needs updates: environment is `node` instead of `jsdom`, and `@testing-library/react`/`@testing-library/jest-dom` are not installed. Let me fix all of this.Good. Now 
+- No existing vitest config. Now I have all the information needed. The project has:
+- `tsconfig.json` with path alias `@/*` → `./src/*`
+- Vitest, jsdom, `@testing-library/react`, `@testing-library/jest
 - Now I have a clear picture. I need to scaffold the full Next.js 15 project while retaining the existing vitest devDependencies. Let me build all the required files:Now let me create the ESLint config 
 - Now I have a clear picture. The quality gate requires files under `src/app/` and a `tailwind.config.ts`. I need to:
 
@@ -51,11 +57,52 @@ Let me verify that commit captured the ri
 - Frequently works with: clear
 - Frequently works with: picture.
 - Frequently works with: project
+- Frequently works with: already
 
 ## Rules
 - Inherits global rules
 
 ## Completed Tasks
+### 2026-04-28 — Configure Vitest with jsdom environment, React Testing Library, and path aliases matching `tsconfig.json` paths
+
+⚠ CONFLICT AVOIDANCE: Other agents have open MRs touching these files: brain/snake/kai-m-ller/memory.md, .gitignore, eslint.config.mjs, next.config.ts, package-lock.json, package.json, src/app/globals.css, src/app/layout.tsx (+3 more). Avoid editing them unless necessary — prefer additive changes. If you must touch a shared file, leave a note in your commit message.
+
+🔴 QUALITY GATE FAILURE (previous attempt):
+Your previous attempt failed these machine criteria:
+- file_exists: File not found: vitest.config.ts
+- grep_match: File not found: vitest.config.ts
+- grep_match: File not found: package.json
+
+Fix these issues and try again.
+
+You MUST address all issues listed above before completing this task.
+The vitest.config.ts already exists and packages are installed. The quality gate failure says "File not found" — this likely means the gate is checking from the repo root and the file needs to be committed. Let me check the git status:I'm in the worktree branch. The worktree only has `app.py` and `r
+
+### 2026-04-28 — Configure Vitest with jsdom environment, React Testing Library, and path aliases matching `tsconfig.json` paths
+
+⚠ CONFLICT AVOIDANCE: Other agents have open MRs touching these files: brain/snake/kai-m-ller/memory.md, .gitignore, eslint.config.mjs, next.config.ts, package-lock.json, package.json, src/app/globals.css, src/app/layout.tsx (+3 more). Avoid editing them unless necessary — prefer additive changes. If you must touch a shared file, leave a note in your commit message.
+
+🔴 QUALITY GATE FAILURE (previous attempt):
+Your previous attempt failed these machine criteria:
+- file_exists: File not found: vitest.config.ts
+- grep_match: File not found: vitest.config.ts
+- grep_match: File not found: package.json
+
+Fix these issues and try again.
+
+You MUST address all issues listed above before completing this task.
+The `vitest.config.ts` exists but needs updates: environment is `node` instead of `jsdom`, and `@testing-library/react`/`@testing-library/jest-dom` are not installed. Let me fix all of this.Good. Now create the Vitest setup file and update the config:Now verify and commit:All done. Here's a summary 
+
+### 2026-04-28 — Configure Vitest with jsdom environment, React Testing Library, and path aliases matching `tsconfig.json` paths
+
+⚠ CONFLICT AVOIDANCE: Other agents have open MRs touching these files: brain/snake/kai-m-ller/memory.md, .gitignore, eslint.config.mjs, next.config.ts, package-lock.json, package.json, src/app/globals.css, src/app/layout.tsx (+3 more). Avoid editing them unless necessary — prefer additive changes. If you must touch a shared file, leave a note in your commit message.
+No existing vitest config. Now I have all the information needed. The project has:
+- `tsconfig.json` with path alias `@/*` → `./src/*`
+- Vitest, jsdom, `@testing-library/react`, `@testing-library/jest-dom`, `@vitejs/plugin-react` all already installed
+- Next.js 15 with React 19
+
+Let me create the Vi
+
 ### 2026-04-28 — Initialize Next.js 15 project with TypeScript, App Router, Tailwind CSS, and ESLint — retain existing vitest devDependencies in `package.json`
 
 ⚠ CONFLICT AVOIDANCE: Other agents have open MRs touching these files: brain/snake/kai-m-ller/memory.md. Avoid editing them unless necessary — prefer additive changes. If you must touch a shared file, leave a note in your commit message.

@@ -1,21 +1,14 @@
 /**
- * Vitest global setup file.
+ * Global test setup — runs before every test file.
  *
- * Runs before every test file (configured via vitest.config.ts → test.setupFiles).
+ * Imports @testing-library/jest-dom to extend Vitest's expect with DOM-aware
+ * matchers such as:
+ *   - toBeInTheDocument()
+ *   - toHaveTextContent()
+ *   - toBeVisible()
+ *   - toHaveClass()
+ *   - toBeDisabled()
  *
- * What this does
- * ──────────────────────────────────────────────────────────────────────────────
- * 1. Imports @testing-library/jest-dom which extends Vitest's `expect` with
- *    DOM-specific matchers:
- *      • toBeInTheDocument()
- *      • toHaveTextContent(…)
- *      • toBeVisible()
- *      • toBeDisabled()
- *      • toHaveClass(…)
- *      … and more — see https://github.com/testing-library/jest-dom
- *
- * Add project-wide mocks or global test utilities here (e.g. mock next/router,
- * mock next/navigation, initialise MSW request handlers, etc.).
+ * This file is referenced in vitest.config.ts → test.setupFiles.
  */
-
 import "@testing-library/jest-dom";
