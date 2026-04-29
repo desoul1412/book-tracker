@@ -104,3 +104,39 @@ export function randomFreeCoordinate(
 
   return candidate;
 }
+
+/**
+ * Places food at a random free cell on the board, given a full `GameState`.
+ *
+ * Compared to `randomFreeCoordinate`, this function:
+ *   • Reads board dimensions and the occupied list directly from `GameState`.
+ *   • Accepts an injectable `rng` parameter (default `Math.random`) so that
+ *     tests can supply a seeded PRNG and get fully deterministic results.
+ *
+ * @param state - Current game snapshot; `snake` is treated as the occupied set.
+ * @param rng   - Random number generator in [0, 1). Defaults to Math.random.
+ * @returns A free `Coordinate`, or `null` when every cell is occupied.
+ *
+ * @example Deterministic test usage:
+ *   // Simple LCG seeded PRNG — always returns the same sequence.
+ *   let seed = 42;
+ *   const seededRng = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 2 ** 32; };
+ *   const pos = placeFood(state, seededRng);
+ */
+export function placeFood(
+  state: { snake: readonly Coordinate[]; boardWidth: number; boardHeight: number },
+  rng: () => number = Math.random
+): Coordinate | null {
+  const { snake, boardWidth, boardHeight } = state;
+  const totalCells = boardWidth * boardHeight;
+  if (snake.length >= totalCells) return null;
+
+  let candidate: Coordinate;
+  do {
+    const x = Math.floor(rng() * boardWidth);
+    const y = Math.floor(rng() * boardHeight);
+    candidate = [x, y];
+  } while (snake.some((c) => coordinatesEqual(c, candidate)));
+
+  return candidate;
+}

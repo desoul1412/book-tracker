@@ -271,3 +271,5 @@ The engine layer (`reducer.ts`, `utils.ts`) is the primary test target — pure 
 ## Recent Changes
 
 - 2026-04-28: Create GitHub Actions CI workflow: lint → type-check → test → build on every push and PR (MR #64a9508)
+- 2026-04-29: Write tests for failing ticket e0085b66 (MR #e3f69bc)
+

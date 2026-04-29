@@ -121,13 +121,81 @@ describe("CHANGE_DIRECTION action", () => {
     expect(next.nextDirection).toBe("UP");
   });
 
-  it("ignores a direction that would reverse the snake", () => {
+  it("ignores a direction that would reverse the snake (direct 180°)", () => {
     const s = runningState();
+    // Moving RIGHT → LEFT is a direct 180° reversal.
     const next = gameReducer(s, {
       type: "CHANGE_DIRECTION",
       direction: "LEFT",
     });
     expect(next.nextDirection).toBe("RIGHT"); // unchanged
+  });
+
+  it("ignores the same direction as already queued (no-op)", () => {
+    // Queue UP first, then send UP again — should remain UP without duplicating.
+    const s = runningState();
+    const afterFirst = gameReducer(s, {
+      type: "CHANGE_DIRECTION",
+      direction: "UP",
+    });
+    const afterSecond = gameReducer(afterFirst, {
+      type: "CHANGE_DIRECTION",
+      direction: "UP",
+    });
+    expect(afterSecond.nextDirection).toBe("UP");
+  });
+
+  it("blocks 180° reversal against the QUEUED direction, not the committed one", () => {
+    // Reproduce the rapid-key-press exploit:
+    //   committed direction: RIGHT   nextDirection: RIGHT
+    //   1. Press UP  → nextDirection becomes UP
+    //   2. Press DOWN before the next tick → DOWN is opposite of queued UP
+    //      and MUST be rejected (even though DOWN is not opposite of committed RIGHT).
+    const s = runningState(); // direction: RIGHT, nextDirection: RIGHT
+
+    // Step 1 — queue UP.
+    const afterUp = gameReducer(s, {
+      type: "CHANGE_DIRECTION",
+      direction: "UP",
+    });
+    expect(afterUp.nextDirection).toBe("UP");
+    expect(afterUp.direction).toBe("RIGHT"); // committed direction unchanged before tick
+
+    // Step 2 — attempt to queue DOWN (opposite of the *queued* UP).
+    const afterDown = gameReducer(afterUp, {
+      type: "CHANGE_DIRECTION",
+      direction: "DOWN",
+    });
+    // DOWN must be ignored — it would reverse the queued UP on the next tick.
+    expect(afterDown.nextDirection).toBe("UP"); // queue preserved
+  });
+
+  it("allows a perpendicular direction change after a queued turn", () => {
+    // If UP is queued, LEFT or RIGHT (perpendicular to UP) must still be accepted.
+    const s = runningState(); // direction: RIGHT, nextDirection: RIGHT
+
+    const afterUp = gameReducer(s, {
+      type: "CHANGE_DIRECTION",
+      direction: "UP",
+    });
+
+    // LEFT is perpendicular to UP — should be accepted and overwrite the queue.
+    const afterLeft = gameReducer(afterUp, {
+      type: "CHANGE_DIRECTION",
+      direction: "LEFT",
+    });
+    expect(afterLeft.nextDirection).toBe("LEFT");
+  });
+
+  it("committed direction is unchanged by CHANGE_DIRECTION (only queued slot updates)", () => {
+    const s = runningState(); // direction: RIGHT
+    const next = gameReducer(s, {
+      type: "CHANGE_DIRECTION",
+      direction: "UP",
+    });
+    // `direction` should only move to UP after a TICK, not immediately.
+    expect(next.direction).toBe("RIGHT");
+    expect(next.nextDirection).toBe("UP");
   });
 });
 

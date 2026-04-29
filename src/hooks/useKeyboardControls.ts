@@ -19,7 +19,8 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import type { Direction, GameStatus } from "@/types";
+import { GameStatus } from "@/types";
+import type { Direction } from "@/types";
 
 interface KeyboardHandlers {
   changeDirection: (d: Direction) => void;
@@ -53,7 +54,7 @@ export function useKeyboardControls({
   const movedThisFrameRef = useRef(false);
 
   useEffect(() => {
-    if (status === "IDLE" || status === "GAME_OVER") return;
+    if (status === GameStatus.idle || status === GameStatus.game_over) return;
 
     function handleKeyDown(e: KeyboardEvent): void {
       // Prevent arrow keys from scrolling the page.
@@ -61,8 +62,8 @@ export function useKeyboardControls({
 
       if (e.key === " ") {
         e.preventDefault();
-        if (status === "RUNNING") pause();
-        else if (status === "PAUSED") resume();
+        if (status === GameStatus.playing) pause();
+        else if (status === GameStatus.paused) resume();
         return;
       }
 

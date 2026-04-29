@@ -117,9 +117,12 @@ export function gameReducer(
       };
 
     case "CHANGE_DIRECTION": {
-      // Ignore if it would reverse the snake or is the same direction.
-      if (isOppositeDirection(state.direction, action.direction)) return state;
-      if (state.direction === action.direction) return state;
+      // Guard against the queued direction, not the committed one.
+      // Rationale: rapid key presses may queue a turn before the next tick
+      // commits it; reversing the queued direction would let the snake
+      // fold back on itself on the following tick.
+      if (isOppositeDirection(state.nextDirection, action.direction)) return state;
+      if (state.nextDirection === action.direction) return state;
       return { ...state, nextDirection: action.direction };
     }
 

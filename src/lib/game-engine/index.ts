@@ -12,10 +12,13 @@
  */
 
 export { gameReducer, buildInitialState } from "./reducer";
+export { createInitialState } from "./engine";
+export { nextTick } from "./next-tick";
 export {
   coordinatesEqual,
   moveCoordinate,
   wrapCoordinate,
   isOppositeDirection,
   randomFreeCoordinate,
+  placeFood,
 } from "./utils";
