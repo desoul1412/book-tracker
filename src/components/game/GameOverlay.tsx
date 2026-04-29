@@ -12,7 +12,7 @@
  * • Null render when status is RUNNING — no DOM overhead during gameplay.
  */
 
-import type { GameStatus } from "@/types";
+import { GameStatus } from "@/types";
 
 interface GameOverlayProps {
   status: GameStatus;
@@ -22,23 +22,25 @@ interface GameOverlayProps {
   onResume: () => void;
 }
 
+type InactiveStatus = GameStatus.idle | GameStatus.paused | GameStatus.game_over;
+
 const STATUS_CONFIG: Record<
-  Exclude<GameStatus, "RUNNING">,
+  InactiveStatus,
   { heading: string; sub: string; primaryLabel: string; primaryAction: "start" | "reset" | "resume" }
 > = {
-  IDLE: {
+  [GameStatus.idle]: {
     heading: "Snake",
     sub: "Arrow keys or WASD to move · Space to pause",
     primaryLabel: "Start Game",
     primaryAction: "start",
   },
-  PAUSED: {
+  [GameStatus.paused]: {
     heading: "Paused",
     sub: "Press Space or click Resume to continue",
     primaryLabel: "Resume",
     primaryAction: "resume",
   },
-  GAME_OVER: {
+  [GameStatus.game_over]: {
     heading: "Game Over",
     sub: "Better luck next time!",
     primaryLabel: "Play Again",
@@ -53,7 +55,7 @@ export function GameOverlay({
   onReset,
   onResume,
 }: GameOverlayProps) {
-  if (status === "RUNNING") return null;
+  if (status === GameStatus.playing) return null;
 
   const { heading, sub, primaryLabel, primaryAction } =
     STATUS_CONFIG[status];
@@ -76,7 +78,7 @@ export function GameOverlay({
         {heading}
       </h2>
 
-      {status === "GAME_OVER" && (
+      {status === GameStatus.game_over && (
         <p className="text-xl text-emerald-400 font-mono">Score: {score}</p>
       )}
 
