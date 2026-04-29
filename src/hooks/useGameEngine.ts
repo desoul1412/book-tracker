@@ -33,6 +33,7 @@ import {
   useReducer,
   useRef,
 } from "react";
+import { GameStatus } from "@/types";
 import type { GameAction, GameConfig, GameState } from "@/types";
 import { buildInitialState, gameReducer } from "@/lib/game-engine";
 
@@ -92,7 +93,7 @@ export function useGameEngine(config: GameConfig = {}): UseGameEngineReturn {
   }, []);
 
   useEffect(() => {
-    if (state.status !== "RUNNING") {
+    if (state.status !== GameStatus.playing) {
       clearLoop();
       return;
     }

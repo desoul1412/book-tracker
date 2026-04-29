@@ -6,14 +6,23 @@
  * file reorganisation never breaks import sites.
  *
  * @example
- *   import type { GameState, Direction } from "@/types";
+ *   import type { GameState, Direction, GameStatus } from "@/types";
+ *   import { GameStatus } from "@/types"; // enum — not `import type`
  */
 
+// `GameStatus` is a runtime enum, so it must NOT use `export type`.
+export { GameStatus } from "./game";
+
 export type {
-  Coordinate,
+  // Canonical names (task spec)
+  Position,
+  Snake,
+  GameEvent,
+  // Stable names used across engine, hooks, and UI
   Direction,
-  GameStatus,
   GameState,
   GameConfig,
+  // Backward-compatible aliases
+  Coordinate,
   GameAction,
 } from "./game";
