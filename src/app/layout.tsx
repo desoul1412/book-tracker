@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
+<<<<<<< HEAD
 import "./globals.css";
+=======
+>>>>>>> c9822da (QA: add Next.js 15 scaffold files and tests for ticket b0629528)
 
 export const metadata: Metadata = {
   title: "Snake Game",

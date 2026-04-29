@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 /**
  * Global test setup — runs before every test file.
  *
@@ -11,4 +12,6 @@
  *
  * This file is referenced in vitest.config.ts → test.setupFiles.
  */
+=======
+>>>>>>> c9822da (QA: add Next.js 15 scaffold files and tests for ticket b0629528)
 import "@testing-library/jest-dom";

@@ -1,5 +1,6 @@
 import type { NextConfig } from "next";
 
+<<<<<<< HEAD
 /**
  * Content Security Policy headers.
  *
@@ -72,5 +73,8 @@ const nextConfig: NextConfig = {
     ];
   },
 };
+=======
+const nextConfig: NextConfig = {};
+>>>>>>> c9822da (QA: add Next.js 15 scaffold files and tests for ticket b0629528)
 
 export default nextConfig;
