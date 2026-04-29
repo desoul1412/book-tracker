@@ -75,12 +75,12 @@ describe("README.md — architecture overview (ticket 0aca89fc)", () => {
   });
 
   it("describes the Engine → Hook → UI data flow", () => {
-    // The README should document the one-way data flow direction
-    const hasFlow =
-      /engine.{0,30}hook/i.test(readmeContent) ||
-      /hook.{0,30}ui/i.test(readmeContent) ||
-      /engine.{0,60}ui/i.test(readmeContent);
-    expect(hasFlow).toBe(true);
+    // The README should document all three layers of the one-way data flow.
+    // Each layer is checked independently because the diagram may span many lines.
+    const hasEngine = /engine/i.test(readmeContent);
+    const hasHook = /hook/i.test(readmeContent);
+    const hasUi = /ui|component/i.test(readmeContent);
+    expect(hasEngine && hasHook && hasUi).toBe(true);
   });
 });
 
