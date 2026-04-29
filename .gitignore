@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # dependencies
 /node_modules
 /.pnp
@@ -32,3 +33,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+=======
+node_modules/
+>>>>>>> 5ac5530 (feat(qa): add next.config.ts with CSP/security headers + Vitest setup (ticket 48626cf9))

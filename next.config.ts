@@ -1,5 +1,6 @@
 import type { NextConfig } from "next";
 
+<<<<<<< HEAD
 /**
  * Content Security Policy headers.
  *
@@ -35,6 +36,23 @@ const securityHeaders = [
   {
     key: "Content-Security-Policy",
     value: ContentSecurityPolicy,
+=======
+const securityHeaders = [
+  {
+    key: "Content-Security-Policy",
+    value: [
+      "default-src 'self'",
+      "script-src 'self'",
+      "style-src 'self' 'unsafe-inline'",
+      "img-src 'self' data: https:",
+      "font-src 'self'",
+      "connect-src 'self'",
+      "frame-ancestors 'none'",
+      "object-src 'none'",
+      "base-uri 'self'",
+      "form-action 'self'",
+    ].join("; "),
+>>>>>>> 5ac5530 (feat(qa): add next.config.ts with CSP/security headers + Vitest setup (ticket 48626cf9))
   },
   {
     key: "X-Content-Type-Options",
@@ -56,6 +74,7 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   async headers() {
+<<<<<<< HEAD
     // Apply security headers in production only.
     // In development, Next.js Fast Refresh injects inline scripts that would
     // be blocked by a strict script-src 'self' policy.
@@ -66,6 +85,13 @@ const nextConfig: NextConfig = {
     return [
       {
         // Apply to every route in the application.
+=======
+    if (process.env.NODE_ENV !== "production") {
+      return [];
+    }
+    return [
+      {
+>>>>>>> 5ac5530 (feat(qa): add next.config.ts with CSP/security headers + Vitest setup (ticket 48626cf9))
         source: "/(.*)",
         headers: securityHeaders,
       },
