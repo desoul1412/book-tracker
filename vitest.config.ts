@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 /**
  * Vitest configuration for the Snake / Next.js 15 project.
  *
@@ -74,14 +73,5 @@ export default defineConfig({
       // Mirror tsconfig.json "paths": { "@/*": ["./src/*"] }
       "@": resolve(__dirname, "./src"),
     },
-=======
-import { defineConfig } from "vitest/config";
-
-export default defineConfig({
-  test: {
-    environment: "node",
-    globals: true,
-    include: ["src/__tests__/**/*.test.ts"],
->>>>>>> 5ac5530 (feat(qa): add next.config.ts with CSP/security headers + Vitest setup (ticket 48626cf9))
   },
 });
