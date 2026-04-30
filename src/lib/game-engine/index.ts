@@ -12,7 +12,13 @@
  */
 
 export { gameReducer, buildInitialState } from "./reducer";
-export { createInitialState } from "./engine";
+export {
+  createInitialState,
+  validateDirectionChange,
+  queueDirection,
+  applyQueuedDirection,
+} from "./engine";
+export type { DirectionValidationResult } from "./engine";
 export { nextTick } from "./next-tick";
 export {
   coordinatesEqual,
