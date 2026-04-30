@@ -22,3 +22,4 @@ export {
   randomFreeCoordinate,
   placeFood,
 } from "./utils";
+export { validateDirectionChange, queueDirection, applyQueuedDirection } from "./engine";
