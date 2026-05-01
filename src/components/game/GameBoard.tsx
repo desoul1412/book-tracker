@@ -19,7 +19,7 @@
  */
 
 import React, { useMemo } from "react";
-import type { Position, Snake } from "../../types/game";
+import type { Position, Snake } from "@/types/game";
 
 // ---------------------------------------------------------------------------
 // Types
