@@ -106,39 +106,55 @@ function drawGrid(
   }
 }
 
+function drawSegment(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  color: string
+): void {
+  const px = cellToPixel(x);
+  const py = cellToPixel(y);
+
+  ctx.fillStyle = color;
+  ctx.strokeStyle = COLORS.snakeStroke;
+  ctx.lineWidth = 1;
+
+  // Slightly inset each segment for a bevelled appearance.
+  const inset = 1;
+  ctx.fillRect(px + inset, py + inset, CELL_SIZE - inset * 2, CELL_SIZE - inset * 2);
+  ctx.strokeRect(px + inset, py + inset, CELL_SIZE - inset * 2, CELL_SIZE - inset * 2);
+}
+
 function drawSnake(
   ctx: CanvasRenderingContext2D,
   snake: GameState["snake"]
 ): void {
-  snake.forEach(([x, y], index) => {
-    const isHead = index === 0;
+  // Draw body segments first (tail → head order, skipping index 0) so
+  // the head is painted last and always remains visible on top.
+  for (let i = snake.length - 1; i > 0; i--) {
+    const [x, y] = snake[i];
+    drawSegment(ctx, x, y, COLORS.snakeBody);
+  }
 
-    ctx.fillStyle = isHead ? COLORS.snakeHead : COLORS.snakeBody;
-    ctx.strokeStyle = COLORS.snakeStroke;
-    ctx.lineWidth = 1;
+  // Draw the head last so it is never occluded by body segments.
+  if (snake.length > 0) {
+    const [hx, hy] = snake[0];
+    drawSegment(ctx, hx, hy, COLORS.snakeHead);
 
-    const px = cellToPixel(x);
-    const py = cellToPixel(y);
-
-    // Slightly inset each segment for a bevelled appearance.
-    const inset = 1;
-    ctx.fillRect(px + inset, py + inset, CELL_SIZE - inset * 2, CELL_SIZE - inset * 2);
-    ctx.strokeRect(px + inset, py + inset, CELL_SIZE - inset * 2, CELL_SIZE - inset * 2);
-
-    // Draw two white pupils on the head to make it immediately recognisable.
-    if (isHead) {
-      ctx.fillStyle = "#ffffff";
-      const eyeSize = Math.max(2, CELL_SIZE / 8);
-      const eyeOffset = CELL_SIZE / 4;
-      ctx.fillRect(px + eyeOffset, py + eyeOffset, eyeSize, eyeSize);
-      ctx.fillRect(
-        px + CELL_SIZE - eyeOffset - eyeSize,
-        py + eyeOffset,
-        eyeSize,
-        eyeSize
-      );
-    }
-  });
+    // Two white pupils make the head immediately recognisable.
+    const px = cellToPixel(hx);
+    const py = cellToPixel(hy);
+    ctx.fillStyle = "#ffffff";
+    const eyeSize = Math.max(2, CELL_SIZE / 8);
+    const eyeOffset = CELL_SIZE / 4;
+    ctx.fillRect(px + eyeOffset, py + eyeOffset, eyeSize, eyeSize);
+    ctx.fillRect(
+      px + CELL_SIZE - eyeOffset - eyeSize,
+      py + eyeOffset,
+      eyeSize,
+      eyeSize
+    );
+  }
 }
 
 function drawFood(
@@ -217,8 +233,8 @@ export function GameBoard({ gameState, config }: GameBoardProps): JSX.Element {
     // 4. Food pellet (drawn before snake so the snake overlaps it when on top).
     drawFood(ctx, gameState.food);
 
-    // 5. Snake body then head (forEach iterates tail → head in reverse
-    //    so later draws paint over earlier ones, making head always visible).
+    // 5. Snake — body segments drawn tail-to-head, head painted last so it
+    //    is always visible even when segments overlap (e.g. at game over).
     drawSnake(ctx, gameState.snake);
   }, [gameState, boardWidth, boardHeight, canvasWidth, canvasHeight]);
 
