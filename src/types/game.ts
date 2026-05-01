@@ -130,7 +130,7 @@ export interface GameConfig {
   boardHeight?: number;
   /** Milliseconds between engine ticks at the start of the game. Default: 150. */
   initialTickMs?: number;
-  /** Minimum tick interval after speed increases. Default: 60. */
+  /** Minimum tick interval after speed increases. Default: 80. */
   minTickMs?: number;
   /** Score increment per pellet consumed. Default: 10. */
   scorePerPellet?: number;
