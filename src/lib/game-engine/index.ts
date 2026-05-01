@@ -12,7 +12,12 @@
  */
 
 export { gameReducer, buildInitialState } from "./reducer";
-export { createInitialState, getTickInterval } from "./engine";
+export {
+  createInitialState,
+  getTickInterval,
+  isWallCollision,
+  isSelfCollision,
+} from "./engine";
 export { nextTick } from "./next-tick";
 export {
   coordinatesEqual,

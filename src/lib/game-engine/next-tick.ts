@@ -18,30 +18,12 @@
  */
 
 import type { Coordinate, Direction, GameState } from "@/types";
+import { GameStatus } from "@/types";
 import { coordinatesEqual, moveCoordinate, randomFreeCoordinate } from "./utils";
+import { isWallCollision, isSelfCollision } from "./engine";
 
 // Score awarded per food pellet — mirrors the engine's DEFAULT_CONFIG.
 const SCORE_PER_PELLET = 10;
-
-// ---------------------------------------------------------------------------
-// Wall-collision check
-// ---------------------------------------------------------------------------
-
-/**
- * Returns `true` when `coord` lies outside the board boundaries.
- *
- * @param coord       - Cell to test.
- * @param boardWidth  - Number of columns (0-indexed, so valid x ∈ [0, width)).
- * @param boardHeight - Number of rows    (0-indexed, so valid y ∈ [0, height)).
- */
-function isOutOfBounds(
-  coord: Coordinate,
-  boardWidth: number,
-  boardHeight: number
-): boolean {
-  const [x, y] = coord;
-  return x < 0 || x >= boardWidth || y < 0 || y >= boardHeight;
-}
 
 // ---------------------------------------------------------------------------
 // nextTick
@@ -65,17 +47,17 @@ export function nextTick(state: GameState, direction: Direction): GameState {
   const newHead = moveCoordinate(state.snake[0], direction);
 
   // ── 1. Wall collision ────────────────────────────────────────────────────
-  if (isOutOfBounds(newHead, state.boardWidth, state.boardHeight)) {
+  if (isWallCollision(newHead, state.boardWidth, state.boardHeight)) {
     const highScore = Math.max(state.score, state.highScore);
-    return { ...state, direction, status: "GAME_OVER", highScore };
+    return { ...state, direction, status: GameStatus.game_over, highScore };
   }
 
   // ── 2. Self collision ────────────────────────────────────────────────────
-  // Exclude the tail: it vacates its cell this tick, so it cannot be hit.
-  const body = state.snake.slice(0, -1);
-  if (body.some((seg) => coordinatesEqual(seg, newHead))) {
+  // isSelfCollision excludes the outgoing tail internally (snake.slice(0, -1)),
+  // so the full snake array is passed — the tail vacates its cell this tick.
+  if (isSelfCollision(newHead, state.snake)) {
     const highScore = Math.max(state.score, state.highScore);
-    return { ...state, direction, status: "GAME_OVER", highScore };
+    return { ...state, direction, status: GameStatus.game_over, highScore };
   }
 
   // ── 3. Food consumption ──────────────────────────────────────────────────
