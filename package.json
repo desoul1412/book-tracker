@@ -1,0 +1,24 @@
+{
+  "name": "snake-game",
+  "version": "1.0.0",
+  "scripts": {
+    "test": "NODE_ENV=test vitest run",
+    "test:watch": "NODE_ENV=test vitest"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/react": "^18.3.1",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.1",
+    "jsdom": "^26.1.0",
+    "typescript": "^5.7.2",
+    "vite": "^6.3.4",
+    "vitest": "^3.2.4"
+  }
+}
