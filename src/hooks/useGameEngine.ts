@@ -41,6 +41,7 @@ import { GameStatus } from "@/types";
 import {
   createInitialState,
   getTickInterval,
+  isOppositeDirection,
   nextTick,
 } from "@/lib/game-engine";
 
@@ -128,7 +129,12 @@ export function useGameEngine(config: GameConfig = {}): UseGameEngineReturn {
       return;
     }
 
-    const ms = getTickInterval(state.score);
+    const ms = getTickInterval(
+      state.score,
+      configRef.current.initialTickMs,
+      configRef.current.minTickMs,
+      configRef.current.scorePerPellet,
+    );
 
     intervalRef.current = setInterval(() => {
       // Use the functional updater form so we always operate on the latest
@@ -213,19 +219,10 @@ export function useGameEngine(config: GameConfig = {}): UseGameEngineReturn {
     setState((prev) => {
       if (prev.status !== GameStatus.playing) return prev;
       // Guard against 180° reversal and duplicate queuing.
-      // Mirror the logic from engine.ts `isOppositeDirection`.
-      const opposites: Record<Direction, Direction> = {
-        UP: "DOWN",
-        DOWN: "UP",
-        LEFT: "RIGHT",
-        RIGHT: "LEFT",
-      };
-      if (
-        direction === prev.nextDirection ||
-        direction === opposites[prev.nextDirection]
-      ) {
-        return prev;
-      }
+      // Delegates to the engine's `isOppositeDirection` to stay in sync with
+      // the validation logic used by `queueDirection` / `validateDirectionChange`.
+      if (isOppositeDirection(prev.nextDirection, direction)) return prev;
+      if (prev.nextDirection === direction) return prev;
       return { ...prev, nextDirection: direction };
     });
   }, []);
