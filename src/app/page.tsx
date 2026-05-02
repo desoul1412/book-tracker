@@ -38,6 +38,7 @@ import { GameBoard } from "@/components/game/GameBoard";
 import { ScoreBoard } from "@/components/game/ScoreBoard";
 import { GameControls } from "@/components/game/GameControls";
 import { GameOverOverlay } from "@/components/game/GameOverOverlay";
+import { KeyboardHints } from "@/components/game/KeyboardHints";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -118,12 +119,29 @@ export default function Home() {
       if (direction) {
         e.preventDefault();
         changeDirection(direction);
+        return;
+      }
+
+      // Space → pause (RUNNING) or resume (PAUSED)
+      if (e.key === " " || e.code === "Space") {
+        e.preventDefault();
+        if (state.status === "RUNNING") pause();
+        else if (state.status === "PAUSED") resume();
+        return;
+      }
+
+      // Enter → start (IDLE)
+      if (e.key === "Enter") {
+        if (state.status === "IDLE") {
+          e.preventDefault();
+          start();
+        }
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [changeDirection]);
+  }, [changeDirection, state.status, start, pause, resume]);
 
   // ── Callbacks ────────────────────────────────────────────────────────────
 
@@ -180,10 +198,8 @@ export default function Home() {
         onReset={reset}
       />
 
-      {/* ── Keyboard hint ─────────────────────────────────────────────────── */}
-      <p className="select-none text-xs text-gray-600">
-        Arrow keys / WASD to move
-      </p>
+      {/* ── Keyboard hints (idle screen only) ────────────────────────────── */}
+      <KeyboardHints status={state.status} />
     </main>
   );
 }
