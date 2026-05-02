@@ -1,0 +1,135 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * Global styles for the Snake game.
+ * Keeps the body dark and removes default margins so the full-bleed
+ * bg-gray-950 background on <main> extends to the viewport edges.
+ *
+ * All custom animations are defined here (CSS-first config, no
+ * tailwind.config.ts). Each animation has a matching utility class
+ * (.animate-*) so components apply them via className.
+ */
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background-color: #030712; /* gray-950 */
+  color-scheme: dark;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Prevent pull-to-refresh / overscroll on mobile during gameplay */
+body {
+  overscroll-behavior: none;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+ * Animation: Fade-in (overlays)
+ * ───────────────────────────────────────────────────────────────────────────── */
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+ * Animation: Food pulse
+ *
+ * Subtle scale + opacity oscillation for the food pellet.
+ * Scale range 0.78–0.96 keeps the food clearly within its cell and avoids
+ * overlap with adjacent snake segments. The 1.1s period is slow enough to
+ * not be distracting during gameplay but fast enough to attract attention.
+ * ease-in-out easing produces a smooth organic pulse vs linear which feels
+ * mechanical.
+ * ───────────────────────────────────────────────────────────────────────────── */
+
+@keyframes food-pulse {
+  0%,
+  100% {
+    transform: scale(0.78);
+    opacity: 0.85;
+  }
+  50% {
+    transform: scale(0.96);
+    opacity: 1;
+  }
+}
+
+.animate-food-pulse {
+  animation: food-pulse 1.1s ease-in-out infinite;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+ * Animation: Score flash
+ *
+ * Brief scale-up + colour flash on score increment. The score <span> is
+ * remounted via React key prop trick, restarting this animation from frame 0.
+ *
+ * Timeline:
+ *   0%  — normal size, inherit colour (green-300)
+ *   30% — peak: 1.35x scale, lime-400 (#a3e635) colour
+ *   100% — settle back to 1x, return to green-300
+ *
+ * 0.4s duration keeps it snappy without feeling jarring. ease-out gives a
+ * satisfying deceleration as it settles. `forwards` fill holds the final
+ * frame so the text doesn't flicker on unmount.
+ * ───────────────────────────────────────────────────────────────────────────── */
+
+@keyframes score-flash {
+  0% {
+    transform: scale(1);
+    color: inherit;
+  }
+  30% {
+    transform: scale(1.35);
+    color: #a3e635; /* lime-400 */
+  }
+  100% {
+    transform: scale(1);
+    color: inherit;
+  }
+}
+
+.animate-score-flash {
+  animation: score-flash 0.4s ease-out forwards;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+ * Animation: Board shimmer
+ *
+ * Subtle green-tinted box-shadow breathing effect on the board container.
+ * Gives the board a living, glowing border feel.
+ * ───────────────────────────────────────────────────────────────────────────── */
+
+@keyframes board-shimmer {
+  0% {
+    box-shadow:
+      0 0 0 1px rgba(74, 222, 128, 0.08),
+      0 0 32px rgba(74, 222, 128, 0.04),
+      inset 0 0 40px rgba(0, 0, 0, 0.6);
+  }
+  50% {
+    box-shadow:
+      0 0 0 1px rgba(74, 222, 128, 0.12),
+      0 0 40px rgba(74, 222, 128, 0.08),
+      inset 0 0 40px rgba(0, 0, 0, 0.5);
+  }
+  100% {
+    box-shadow:
+      0 0 0 1px rgba(74, 222, 128, 0.08),
+      0 0 32px rgba(74, 222, 128, 0.04),
+      inset 0 0 40px rgba(0, 0, 0, 0.6);
+  }
+}
+
+.animate-board-shimmer {
+  animation: board-shimmer 4s ease-in-out infinite;
+}
