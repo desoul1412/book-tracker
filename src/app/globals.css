@@ -1,0 +1,105 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * Global styles for the Snake game.
+ * Keeps the body dark and removes default margins so the full-bleed
+ * bg-gray-950 background on <main> extends to the viewport edges.
+ */
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background-color: #030712; /* gray-950 */
+  color-scheme: dark;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Prevent pull-to-refresh / overscroll on mobile during gameplay */
+body {
+  overscroll-behavior: none;
+}
+
+/* Fade-in for overlays */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Smooth pulsing animation for food pellet — scale + brightness for extra juice */
+@keyframes pulse-glow {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+    filter: brightness(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(0.88);
+    filter: brightness(1.5) saturate(1.4);
+  }
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 1.2s ease-in-out infinite;
+}
+
+/* Score flash: brief yellow-white pop when score increments.
+   Starts at the green-300 tint (#86efac), peaks yellow-200 at 20 %,
+   then eases back. Using `forwards` means the final frame persists,
+   so `transform: scale(1)` keeps the element at normal size after. */
+@keyframes score-flash {
+  0% {
+    color: #86efac; /* green-300 — matches text-green-300 */
+    text-shadow: none;
+    transform: scale(1);
+  }
+  20% {
+    color: #fef08a; /* yellow-200 */
+    text-shadow: 0 0 10px #fde047, 0 0 22px #facc15;
+    transform: scale(1.22);
+  }
+  100% {
+    color: #86efac;
+    text-shadow: none;
+    transform: scale(1);
+  }
+}
+
+.animate-score-flash {
+  animation: score-flash 0.5s ease-out forwards;
+}
+
+/* Subtle grid-line shimmer for the board background */
+@keyframes board-shimmer {
+  0% {
+    box-shadow:
+      0 0 0 1px rgba(74, 222, 128, 0.08),
+      0 0 32px rgba(74, 222, 128, 0.04),
+      inset 0 0 40px rgba(0, 0, 0, 0.6);
+  }
+  50% {
+    box-shadow:
+      0 0 0 1px rgba(74, 222, 128, 0.12),
+      0 0 40px rgba(74, 222, 128, 0.08),
+      inset 0 0 40px rgba(0, 0, 0, 0.5);
+  }
+  100% {
+    box-shadow:
+      0 0 0 1px rgba(74, 222, 128, 0.08),
+      0 0 32px rgba(74, 222, 128, 0.04),
+      inset 0 0 40px rgba(0, 0, 0, 0.6);
+  }
+}
+
+.animate-board-shimmer {
+  animation: board-shimmer 4s ease-in-out infinite;
+}
