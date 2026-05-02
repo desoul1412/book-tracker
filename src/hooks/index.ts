@@ -11,3 +11,6 @@
 
 export { useGameEngine } from "./useGameEngine";
 export type { UseGameEngineReturn } from "./useGameEngine";
+
+export { useSwipeControls } from "./useSwipeControls";
+export type { UseSwipeControlsOptions } from "./useSwipeControls";

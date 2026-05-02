@@ -177,6 +177,8 @@ export default function Home() {
           food={state.food}
           boardWidth={state.boardWidth}
           boardHeight={state.boardHeight}
+          onDirectionChange={changeDirection}
+          swipeEnabled={state.status === "RUNNING"}
         />
 
         {/* GameOverOverlay renders null unless status === "GAME_OVER".

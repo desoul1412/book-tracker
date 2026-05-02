@@ -142,6 +142,11 @@ export function useGameEngine(config: GameConfig = {}): UseGameEngineReturn {
     dispatch({ type: "RESET" });
   }, []);
 
+  /**
+   * Queue a direction change from any input source — keyboard, touch swipe,
+   * or on-screen controls.  This is the same callback that should be passed to
+   * `GameBoard`'s `onDirectionChange` prop to enable touch/swipe controls.
+   */
   const changeDirection = useCallback((direction: Direction) => {
     dispatch({ type: "CHANGE_DIRECTION", direction });
   }, []);
